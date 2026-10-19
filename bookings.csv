@@ -1,0 +1,22 @@
+booking_id,room_id,guest_name,check_in,check_out,status
+BK001,STD-101,Nguyen Van A,2026-10-01,2026-10-03,confirmed
+BK002,STD-101,Tran Thi B,2026-10-02,2026-10-05,confirmed
+BK003,STD-102,Le Van C,2026-10-01,2026-10-04,cancelled
+BK004,STD-102,Pham Van D,2026-10-03,2026-10-06,confirmed
+BK005,DEL-201,Hoang Thi E,2026-10-05,2026-10-08,confirmed
+BK006,DEL-201,Vu Van F,2026-10-07,2026-10-10,confirmed
+BK007,DEL-202,Dang Van G,2026-10-02,2026-10-05,confirmed
+BK008,SUI-301,Bui Thi H,2026-10-10,2026-10-12,confirmed
+BK009,SUI-302,Dinh Van I,2026-10-10,2026-10-15,confirmed
+BK010,STD-103,Ngo Thi K,2026-10-04,2026-10-07,confirmed
+BK011,STD-104,Doan Van L,2026-10-05,2026-10-09,confirmed
+BK012,DEL-203,Ly Thi M,2026-10-12,2026-10-14,confirmed
+BK013,DEL-204,Chu Van N,2026-10-15,2026-10-18,confirmed
+BK014,SUI-303,Phung Thi O,2026-10-16,2026-10-20,confirmed
+BK015,STD-105,Truong Van P,2026-10-18,2026-10-21,confirmed
+BK016,DEL-205,Luu Thi Q,2026-10-20,2026-10-23,confirmed
+BK017,SUI-304,Cao Van R,2026-10-21,2026-10-25,confirmed
+BK018,STD-101,Duong Thi S,2026-10-25,2026-10-28,confirmed
+BK019,DEL-201,Huynh Van T,2026-10-26,2026-10-29,confirmed
+BK020,SUI-301,Phan Thi U,2026-10-28,2026-10-31,confirmed
+BK021,STD-102,Trinh Van V,2026-10-29,2026-10-31,confirmed
