@@ -4,8 +4,54 @@
   <meta charset="utf-8">
   <title>Lua Vang CRS Test</title>
 </head>
+
 <body>
   <h1>Lua Vang CRS</h1>
-  <p>GitHub Pages is working.</p>
+
+  <button id="testBtn">Test backend</button>
+  <p id="status">Not tested yet.</p>
+
+  <script>
+    const FUNCTION_URL =
+      "https://scxjezoysmwyumyebuls.supabase.co/functions/v1/ping";
+
+    const ANON_KEY = "curl -L -X POST 'https://scxjezoysmwyumyebuls.supabase.co/functions/v1/ping' \
+  -H 'Authorization: Bearer sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w' \
+  -H 'apikey: sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w' \
+  -H 'Content-Type: application/json' \
+  --data '{"name":"Functions"}'
+"
+;
+
+    document.getElementById("testBtn").onclick = async () => {
+      const status = document.getElementById("status");
+      status.textContent = "Testing...";
+
+      try {
+        const response = await fetch(FUNCTION_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": ANON_KEY,
+            "Authorization": `Bearer ${ANON_KEY}`
+          },
+          body: "{}"
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.ok) {
+          status.textContent =
+            "✅ Connection successful: " + data.message;
+        } else {
+          status.textContent =
+            "❌ Error: " + JSON.stringify(data);
+        }
+      } catch (e) {
+        status.textContent =
+          "❌ Connection failed: " + e.message;
+      }
+    };
+  </script>
 </body>
 </html>
