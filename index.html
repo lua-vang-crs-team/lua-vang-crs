@@ -1,7 +1,8 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lua Vang CRS Test</title>
 </head>
 
@@ -15,43 +16,42 @@
     const FUNCTION_URL =
       "https://scxjezoysmwyumyebuls.supabase.co/functions/v1/ping";
 
-    const ANON_KEY = "curl -L -X POST 'https://scxjezoysmwyumyebuls.supabase.co/functions/v1/ping' \
-  -H 'Authorization: Bearer sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w' \
-  -H 'apikey: sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w' \
-  -H 'Content-Type: application/json' \
-  --data '{"name":"Functions"}'
-"
-;
+    const ANON_KEY =
+      "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 
-    document.getElementById("testBtn").onclick = async () => {
+    document.getElementById("testBtn").addEventListener("click", async () => {
       const status = document.getElementById("status");
+
       status.textContent = "Testing...";
 
       try {
         const response = await fetch(FUNCTION_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Authorization": `Bearer ${ANON_KEY}`,
             "apikey": ANON_KEY,
-            "Authorization": `Bearer ${ANON_KEY}`
+            "Content-Type": "application/json"
           },
-          body: "{}"
+          body: JSON.stringify({
+            name: "Functions"
+          })
         });
 
         const data = await response.json();
 
-        if (response.ok && data.ok) {
+        if (response.ok && data.ok === true) {
           status.textContent =
             "✅ Connection successful: " + data.message;
         } else {
           status.textContent =
-            "❌ Error: " + JSON.stringify(data);
+            "❌ Backend error: " + JSON.stringify(data);
         }
-      } catch (e) {
+
+      } catch (error) {
         status.textContent =
-          "❌ Connection failed: " + e.message;
+          "❌ Connection failed: " + error.message;
       }
-    };
+    });
   </script>
 </body>
 </html>
