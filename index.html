@@ -1,57 +1,93 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lua Vang CRS Test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đặt Phòng — Lụa Vàng Resort &amp; Spa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <h1>Lua Vang CRS</h1>
 
-  <button id="testBtn">Test backend</button>
-  <p id="status">Not tested yet.</p>
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header>
+    <div class="header-inner">
+      <div class="hotel-name">Lụa Vàng</div>
+      <div class="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Hệ thống đặt phòng</div>
+    </div>
+  </header>
 
-  <script>
-    const FUNCTION_URL =
-      "https://scxjezoysmwyumyebuls.supabase.co/functions/v1/ping";
+  <main>
 
-    const ANON_KEY =
-      "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
+    <!-- ═══════════════════════════ STEP 1: SEARCH ════════════════════════════ -->
+    <section class="step" id="search-section">
+      <div class="step-tag">Bước 1</div>
+      <h2>Tìm phòng trống</h2>
 
-    document.getElementById("testBtn").addEventListener("click", async () => {
-      const status = document.getElementById("status");
+      <div class="date-row">
+        <div class="field">
+          <label for="check-in">Ngày nhận phòng</label>
+          <input type="date" id="check-in">
+        </div>
+        <span class="date-arrow">→</span>
+        <div class="field">
+          <label for="check-out">Ngày trả phòng</label>
+          <input type="date" id="check-out">
+        </div>
+      </div>
 
-      status.textContent = "Testing...";
+      <button class="btn btn-primary" id="search-btn">Kiểm tra phòng trống</button>
+      <div id="search-status" class="msg hidden"></div>
+      <div id="rooms-container"></div>
+    </section>
 
-      try {
-        const response = await fetch(FUNCTION_URL, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${ANON_KEY}`,
-            "apikey": ANON_KEY,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: "Functions"
-          })
-        });
+    <!-- ═══════════════════════════ STEP 2: BOOK ══════════════════════════════ -->
+    <section class="step" id="book-section">
+      <div class="step-tag">Bước 2</div>
+      <h2>Xác nhận đặt phòng</h2>
 
-        const data = await response.json();
+      <div class="field">
+        <label for="selected-room">Mã phòng đã chọn</label>
+        <input type="text" id="selected-room"
+               placeholder="Chọn phòng từ kết quả bên trên" readonly>
+      </div>
+      <div class="field">
+        <label for="guest-name">Tên khách lưu trú</label>
+        <input type="text" id="guest-name" placeholder="Họ và tên đầy đủ">
+      </div>
 
-        if (response.ok && data.ok === true) {
-          status.textContent =
-            "✅ Connection successful: " + data.message;
-        } else {
-          status.textContent =
-            "❌ Backend error: " + JSON.stringify(data);
-        }
+      <button class="btn btn-primary" id="book-btn">Xác nhận đặt phòng</button>
+      <div id="book-status" class="msg hidden"></div>
 
-      } catch (error) {
-        status.textContent =
-          "❌ Connection failed: " + error.message;
-      }
-    });
-  </script>
+      <!-- Booking ID result box -->
+      <div id="booking-result" class="booking-panel hidden">
+        <!-- filled by JS -->
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════ STEP 3: CANCEL ════════════════════════════ -->
+    <section class="step" id="cancel-section">
+      <div class="step-tag">Hủy đặt phòng</div>
+      <h2>Nhập mã để hủy</h2>
+
+      <div class="field">
+        <label for="booking-id-input">Mã đặt phòng (Booking ID)</label>
+        <input type="text" id="booking-id-input"
+               placeholder="Dán mã đặt phòng vào đây…">
+      </div>
+
+      <button class="btn btn-cancel" id="cancel-btn">Hủy đặt phòng</button>
+      <div id="cancel-status" class="msg hidden"></div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Hệ thống quản lý đặt phòng nội bộ &ensp;·&ensp; 2026</p>
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>
