@@ -11,7 +11,7 @@ const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
 
 // ── STATE ────────────────────────────────────────────────────
 let searchDates  = { check_in: null, check_out: null };
-let selectedRoom = null;   // room object chosen by user
+let selectedRoom = null;   // full room object chosen by user
 
 // ── CORE API CALL ─────────────────────────────────────────────
 /**
@@ -96,7 +96,6 @@ function roomTypeName(t) {
   coEl.min = today;
 
   ciEl.addEventListener("change", () => {
-    // check-out must be at least 1 day after check-in
     coEl.min = ciEl.value;
     if (coEl.value && coEl.value <= ciEl.value) coEl.value = "";
   });
@@ -152,8 +151,10 @@ document.getElementById("search-btn").addEventListener("click", async () => {
       return;
     }
 
+    // — Đếm số hạng phòng (không đếm số phòng vật lý)
+    const typeCount = new Set(rooms.map(r => (r.room_type || "").toLowerCase())).size;
     showMsg("search-status", "success",
-      `Tìm thấy <strong>${rooms.length}</strong> phòng trống.`);
+      `Có <strong>${typeCount}</strong> hạng phòng trống trong khoảng thời gian này.`);
     renderRooms(rooms);
 
   } catch (err) {
@@ -163,57 +164,77 @@ document.getElementById("search-btn").addEventListener("click", async () => {
   }
 });
 
-/** Render the list of available rooms. */
+/** Render available room types (grouped — không hiện số phòng, không hiện room_id). */
 function renderRooms(rooms) {
   const container = document.getElementById("rooms-container");
   container.innerHTML = "";
 
+  // ── Group by room_type ───────────────────────────────────────
+  const groups = {};
+  rooms.forEach((room) => {
+    const key = (room.room_type || "other").toLowerCase();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(room);
+  });
+
   const list = document.createElement("div");
   list.className = "room-list";
 
-  rooms.forEach((room) => {
-    const row       = document.createElement("div");
-    row.className   = "room-row";
-    row.dataset.id  = room.room_id;
+  Object.entries(groups).forEach(([type, typeRooms]) => {
+    // Rate range across all physical rooms of this type
+    const rates   = typeRooms.flatMap(r => [r.rate_low, r.rate_high]).filter(Boolean);
+    const minRate = Math.min(...rates);
+    const maxRate = Math.max(...rates);
 
-    row.innerHTML = `
+    // Capacity — lấy từ phòng đầu tiên trong nhóm
+    const capacity = typeRooms[0].capacity;
+
+    const card = document.createElement("div");
+    card.className    = "room-row";
+    card.dataset.type = type;
+
+    card.innerHTML = `
       <div class="room-info">
-        <h4>${roomTypeName(room.room_type)} &mdash; <span style="font-family:var(--sans);font-size:0.85rem">${room.room_id}</span></h4>
-        <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} người</div>
+        <h4>${roomTypeName(type)}</h4>
+        <div class="room-meta">${capacity} người tối đa</div>
       </div>
-      <div class="room-rate">${rateStr(room.rate_low, room.rate_high)}</div>
-      <button class="btn-select" data-id="${room.room_id}">Chọn</button>
+      <div class="room-rate">${rateStr(minRate, maxRate)}</div>
+      <button class="btn-select" data-type="${type}">Chọn</button>
     `;
 
-    list.appendChild(row);
+    list.appendChild(card);
   });
 
   container.appendChild(list);
 
-  // Single event listener on the list (event delegation)
+  // Single event listener (event delegation)
   list.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-select");
     if (!btn) return;
-    const room = rooms.find((r) => r.room_id === btn.dataset.id);
-    if (room) pickRoom(room, list);
+    const type      = btn.dataset.type;
+    const typeRooms = groups[type];
+    if (typeRooms && typeRooms.length > 0) {
+      pickRoom(typeRooms[0], list, type);
+    }
   });
 }
 
-/** Handle room selection. */
-function pickRoom(room, listEl) {
-  selectedRoom = room;
+/** Handle room type selection — lưu phòng vật lý đầu tiên vào state, hiện tên hạng cho khách. */
+function pickRoom(room, listEl, displayType) {
+  selectedRoom = room;   // full room object (room_id dùng cho API call)
 
-  // Highlight selected row
+  // Highlight selected card
+  const typeKey = displayType || (room.room_type || "").toLowerCase();
   listEl.querySelectorAll(".room-row").forEach((r) => {
-    r.classList.toggle("selected-row", r.dataset.id === room.room_id);
+    r.classList.toggle("selected-row", r.dataset.type === typeKey);
   });
 
-  // Fill room input
+  // Hiện TÊN HẠNG PHÒNG trong ô input (không hiện room_id)
   const input = document.getElementById("selected-room");
-  input.value = room.room_id;
+  input.value = roomTypeName(typeKey);
   input.classList.add("has-value");
 
-  // Scroll to booking section
+  // Scroll xuống phần đặt phòng
   document.getElementById("book-section")
     .scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -223,15 +244,15 @@ function pickRoom(room, listEl) {
 // ══════════════════════════════════════════════════════════════
 
 document.getElementById("book-btn").addEventListener("click", async () => {
-  const roomId    = (document.getElementById("selected-room").value || "").trim();
-  const guestName = (document.getElementById("guest-name").value   || "").trim();
+  const guestName = (document.getElementById("guest-name").value || "").trim();
 
   // — Validate
-  if (!roomId) {
+  if (!selectedRoom) {
     showMsg("book-status", "warning",
-      "Chưa chọn phòng. Tìm phòng ở bước 1 và nhấn &laquo;Chọn&raquo;.");
+      "Chưa chọn hạng phòng. Tìm phòng ở bước 1 và nhấn &laquo;Chọn&raquo;.");
     return;
   }
+  const roomId = selectedRoom.room_id;   // room_id thật từ state, không từ ô hiển thị
   if (!guestName) {
     showMsg("book-status", "warning", "Vui lòng nhập tên khách lưu trú.");
     return;
@@ -258,7 +279,7 @@ document.getElementById("book-btn").addEventListener("click", async () => {
     // HTTP 409 — conflict
     if (status === 409) {
       showMsg("book-status", "error",
-        "Phòng này vừa có người đặt trùng ngày. Vui lòng chọn phòng khác.");
+        "Phòng này vừa có người đặt trùng ngày. Vui lòng chọn hạng phòng khác.");
       return;
     }
 
@@ -270,10 +291,10 @@ document.getElementById("book-btn").addEventListener("click", async () => {
 
     // Success
     showMsg("book-status", "success", "Đặt phòng thành công. Lưu lại mã bên dưới.");
-    renderBookingPanel(data.booking_id, roomId, guestName,
+    renderBookingPanel(data.booking_id, selectedRoom, guestName,
       searchDates.check_in, searchDates.check_out);
 
-    // Auto-fill cancel section
+    // Auto-fill phần hủy
     document.getElementById("booking-id-input").value = data.booking_id;
 
   } catch (err) {
@@ -283,8 +304,8 @@ document.getElementById("book-btn").addEventListener("click", async () => {
   }
 });
 
-/** Render the booking confirmation panel with booking ID. */
-function renderBookingPanel(bookingId, roomId, guestName, checkIn, checkOut) {
+/** Render booking confirmation panel — hiện tên hạng phòng, không hiện room_id. */
+function renderBookingPanel(bookingId, room, guestName, checkIn, checkOut) {
   const panel  = document.getElementById("booking-result");
   const copyId = "copy-bid-btn";
 
@@ -292,7 +313,7 @@ function renderBookingPanel(bookingId, roomId, guestName, checkIn, checkOut) {
     <div class="bp-label">Mã đặt phòng — lưu lại để dùng khi cần hủy</div>
     <div class="bp-code">${bookingId}</div>
     <div class="bp-detail">
-      ${roomId} &nbsp;·&nbsp; ${guestName} &nbsp;·&nbsp; ${checkIn} → ${checkOut}
+      ${roomTypeName(room.room_type)} &nbsp;·&nbsp; ${guestName} &nbsp;·&nbsp; ${checkIn} → ${checkOut}
     </div>
     <button class="btn-copy" id="${copyId}">Sao chép mã</button>
   `;
@@ -307,7 +328,6 @@ function renderBookingPanel(bookingId, roomId, guestName, checkIn, checkOut) {
         setTimeout(() => { btn.textContent = "Sao chép mã"; }, 2200);
       })
       .catch(() => {
-        // Fallback for browsers that block clipboard API
         prompt("Sao chép mã booking:", bookingId);
       });
   });
