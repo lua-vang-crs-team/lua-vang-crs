@@ -3,91 +3,293 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đặt Phòng — Lụa Vàng Resort &amp; Spa</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+
+  <title>
+    Đặt Phòng — Lụa Vàng Resort &amp; Spa
+  </title>
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+  >
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+  >
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
 </head>
+
 <body>
 
-  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- HEADER                                                  -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
   <header>
     <div class="header-inner">
-      <div class="hotel-name">Lụa Vàng</div>
-      <div class="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Hệ thống đặt phòng</div>
+
+      <div class="hotel-name">
+        Lụa Vàng
+      </div>
+
+      <div class="hotel-sub">
+        Resort &amp; Spa
+        &ensp;·&ensp;
+        Hệ thống đặt phòng
+      </div>
+
     </div>
   </header>
 
+
   <main>
 
-    <!-- ═══════════════════════════ STEP 1: SEARCH ════════════════════════════ -->
-    <section class="step" id="search-section">
-      <div class="step-tag">Bước 1</div>
-      <h2>Tìm phòng trống</h2>
+    <!-- ═════════════════════════════════════════════════════ -->
+    <!-- STEP 1 — SEARCH                                      -->
+    <!-- ═════════════════════════════════════════════════════ -->
+
+    <section
+      class="step"
+      id="search-section"
+    >
+
+      <div class="step-tag">
+        Bước 1
+      </div>
+
+      <h2>
+        Tìm phòng trống
+      </h2>
 
       <div class="date-row">
+
         <div class="field">
-          <label for="check-in">Ngày nhận phòng</label>
-          <input type="date" id="check-in">
+
+          <label for="check-in">
+            Ngày nhận phòng
+          </label>
+
+          <input
+            type="date"
+            id="check-in"
+            required
+          >
+
         </div>
-        <span class="date-arrow">→</span>
+
+
+        <span
+          class="date-arrow"
+          aria-hidden="true"
+        >
+          →
+        </span>
+
+
         <div class="field">
-          <label for="check-out">Ngày trả phòng</label>
-          <input type="date" id="check-out">
+
+          <label for="check-out">
+            Ngày trả phòng
+          </label>
+
+          <input
+            type="date"
+            id="check-out"
+            required
+          >
+
         </div>
+
       </div>
 
-      <button class="btn btn-primary" id="search-btn">Kiểm tra phòng trống</button>
-      <div id="search-status" class="msg hidden"></div>
+
+      <button
+        class="btn btn-primary"
+        id="search-btn"
+        type="button"
+      >
+        Kiểm tra phòng trống
+      </button>
+
+
+      <div
+        id="search-status"
+        class="msg hidden"
+        aria-live="polite"
+      ></div>
+
+
+      <!--
+        app.js sẽ render các HẠNG PHÒNG còn trống ở đây.
+        Không hiển thị toàn bộ room_id vật lý cho khách.
+      -->
       <div id="rooms-container"></div>
+
     </section>
 
-    <!-- ═══════════════════════════ STEP 2: BOOK ══════════════════════════════ -->
-    <section class="step" id="book-section">
-      <div class="step-tag">Bước 2</div>
-      <h2>Xác nhận đặt phòng</h2>
+
+    <!-- ═════════════════════════════════════════════════════ -->
+    <!-- STEP 2 — BOOK                                        -->
+    <!-- ═════════════════════════════════════════════════════ -->
+
+    <section
+      class="step"
+      id="book-section"
+    >
+
+      <div class="step-tag">
+        Bước 2
+      </div>
+
+      <h2>
+        Xác nhận đặt phòng
+      </h2>
+
 
       <div class="field">
-        <label for="selected-room">Mã phòng đã chọn</label>
-        <input type="text" id="selected-room"
-               placeholder="Chọn phòng từ kết quả bên trên" readonly>
+
+        <label for="selected-room">
+          Hạng phòng đã chọn
+        </label>
+
+        <input
+          type="text"
+          id="selected-room"
+          placeholder="Chọn hạng phòng từ kết quả bên trên"
+          readonly
+        >
+
       </div>
+
+
       <div class="field">
-        <label for="guest-name">Tên khách lưu trú</label>
-        <input type="text" id="guest-name" placeholder="Họ và tên đầy đủ">
+
+        <label for="guest-name">
+          Tên khách lưu trú
+        </label>
+
+        <input
+          type="text"
+          id="guest-name"
+          placeholder="Họ và tên đầy đủ"
+          autocomplete="name"
+        >
+
       </div>
 
-      <button class="btn btn-primary" id="book-btn">Xác nhận đặt phòng</button>
-      <div id="book-status" class="msg hidden"></div>
 
-      <!-- Booking ID result box -->
-      <div id="booking-result" class="booking-panel hidden">
-        <!-- filled by JS -->
+      <button
+        class="btn btn-primary"
+        id="book-btn"
+        type="button"
+      >
+        Xác nhận đặt phòng
+      </button>
+
+
+      <div
+        id="book-status"
+        class="msg hidden"
+        aria-live="polite"
+      ></div>
+
+
+      <!-- Booking confirmation result -->
+      <div
+        id="booking-result"
+        class="booking-panel hidden"
+      >
+        <!-- Filled dynamically by app.js -->
       </div>
+
     </section>
 
-    <!-- ═══════════════════════════ STEP 3: CANCEL ════════════════════════════ -->
-    <section class="step" id="cancel-section">
-      <div class="step-tag">Hủy đặt phòng</div>
-      <h2>Nhập mã để hủy</h2>
 
-      <div class="field">
-        <label for="booking-id-input">Mã đặt phòng (Booking ID)</label>
-        <input type="text" id="booking-id-input"
-               placeholder="Dán mã đặt phòng vào đây…">
+    <!-- ═════════════════════════════════════════════════════ -->
+    <!-- STEP 3 — CANCEL                                      -->
+    <!-- ═════════════════════════════════════════════════════ -->
+
+    <section
+      class="step"
+      id="cancel-section"
+    >
+
+      <div class="step-tag">
+        Hủy đặt phòng
       </div>
 
-      <button class="btn btn-cancel" id="cancel-btn">Hủy đặt phòng</button>
-      <div id="cancel-status" class="msg hidden"></div>
+      <h2>
+        Nhập mã để hủy
+      </h2>
+
+
+      <div class="field">
+
+        <label for="booking-id-input">
+          Mã đặt phòng
+          (Booking ID)
+        </label>
+
+        <input
+          type="text"
+          id="booking-id-input"
+          placeholder="Dán mã đặt phòng vào đây…"
+          autocomplete="off"
+        >
+
+      </div>
+
+
+      <button
+        class="btn btn-cancel"
+        id="cancel-btn"
+        type="button"
+      >
+        Hủy đặt phòng
+      </button>
+
+
+      <div
+        id="cancel-status"
+        class="msg hidden"
+        aria-live="polite"
+      ></div>
+
     </section>
 
   </main>
 
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- FOOTER                                                  -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
   <footer>
-    <p>Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Hệ thống quản lý đặt phòng &ensp;·&ensp; 2026</p>
+
+    <p>
+      Lụa Vàng Resort &amp; Spa
+      &ensp;·&ensp;
+      Hệ thống quản lý đặt phòng
+      &ensp;·&ensp;
+      2026
+    </p>
+
   </footer>
 
+
+  <!-- Main frontend logic -->
   <script src="app.js"></script>
+
 </body>
 </html>
