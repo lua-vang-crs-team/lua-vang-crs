@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đặt Phòng — Lụa Vàng Resort &amp; Spa</title>
+  <title>Book Your Stay — Lụa Vàng Resort &amp; Spa</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -15,7 +16,7 @@
   <header>
     <div class="header-inner">
       <div class="hotel-name">Lụa Vàng</div>
-      <div class="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Hệ thống đặt phòng</div>
+      <div class="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Online Reservations</div>
     </div>
   </header>
 
@@ -23,42 +24,42 @@
 
     <!-- ═══════════════════════════ STEP 1: SEARCH ════════════════════════════ -->
     <section class="step" id="search-section">
-      <div class="step-tag">Bước 1</div>
-      <h2>Tìm phòng trống</h2>
+      <div class="step-tag">Step 1</div>
+      <h2>Find Your Room</h2>
 
       <div class="date-row">
         <div class="field">
-          <label for="check-in">Ngày nhận phòng</label>
+          <label for="check-in">Check-in Date</label>
           <input type="date" id="check-in">
         </div>
         <span class="date-arrow">→</span>
         <div class="field">
-          <label for="check-out">Ngày trả phòng</label>
+          <label for="check-out">Check-out Date</label>
           <input type="date" id="check-out">
         </div>
       </div>
 
-      <button class="btn btn-primary" id="search-btn">Kiểm tra phòng trống</button>
+      <button class="btn btn-primary" id="search-btn">Check Availability</button>
       <div id="search-status" class="msg hidden"></div>
       <div id="rooms-container"></div>
     </section>
 
     <!-- ═══════════════════════════ STEP 2: BOOK ══════════════════════════════ -->
     <section class="step" id="book-section">
-      <div class="step-tag">Bước 2</div>
-      <h2>Xác nhận đặt phòng</h2>
+      <div class="step-tag">Step 2</div>
+      <h2>Complete Your Reservation</h2>
 
       <div class="field">
-        <label for="selected-room">Mã phòng đã chọn</label>
+        <label for="selected-room">Selected Room ID</label>
         <input type="text" id="selected-room"
-               placeholder="Chọn phòng từ kết quả bên trên" readonly>
+               placeholder="Select a room from the results above" readonly>
       </div>
       <div class="field">
-        <label for="guest-name">Tên khách lưu trú</label>
-        <input type="text" id="guest-name" placeholder="Họ và tên đầy đủ">
+        <label for="guest-name">Guest Name</label>
+        <input type="text" id="guest-name" placeholder="Enter your full name">
       </div>
 
-      <button class="btn btn-primary" id="book-btn">Xác nhận đặt phòng</button>
+      <button class="btn btn-primary" id="book-btn">Confirm Booking</button>
       <div id="book-status" class="msg hidden"></div>
 
       <!-- Booking ID result box -->
@@ -69,23 +70,23 @@
 
     <!-- ═══════════════════════════ STEP 3: CANCEL ════════════════════════════ -->
     <section class="step" id="cancel-section">
-      <div class="step-tag">Hủy đặt phòng</div>
-      <h2>Nhập mã để hủy</h2>
+      <div class="step-tag">Manage Your Booking</div>
+      <h2>Cancel a Reservation</h2>
 
       <div class="field">
-        <label for="booking-id-input">Mã đặt phòng (Booking ID)</label>
+        <label for="booking-id-input">Booking ID</label>
         <input type="text" id="booking-id-input"
-               placeholder="Dán mã đặt phòng vào đây…">
+               placeholder="Enter or paste your Booking ID here…">
       </div>
 
-      <button class="btn btn-cancel" id="cancel-btn">Hủy đặt phòng</button>
+      <button class="btn btn-cancel" id="cancel-btn">Cancel Booking</button>
       <div id="cancel-status" class="msg hidden"></div>
     </section>
 
   </main>
 
   <footer>
-    <p>Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Hệ thống quản lý đặt phòng nội bộ &ensp;·&ensp; 2026</p>
+    <p>Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Hotel Reservation System &ensp;·&ensp; 2026</p>
   </footer>
 
   <script src="app.js"></script>
