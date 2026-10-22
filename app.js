@@ -31,7 +31,7 @@ const I18N = {
     'label-bid':      'Mã đặt phòng (Booking ID)',
     'ph-bid':         'Dán mã đặt phòng vào đây…',
     'btn-cancel':     'Hủy đặt phòng',
-    'footer-text':    'Lụa Vàng Resort & Spa · Hệ thống quản lý đặt phòng nội bộ · 2026',
+    'footer-text':    'Lụa Vàng Resort & Spa · Hệ thống quản lý đặt phòng · 2026',
     /* ── room list ── */
     'btn-pick':       'Chọn',
     'unit-guests':    'người',
@@ -89,7 +89,7 @@ const I18N = {
     'label-bid':      'Booking ID',
     'ph-bid':         'Paste your booking ID here…',
     'btn-cancel':     'Cancel Booking',
-    'footer-text':    'Lua Vang Resort & Spa · Internal Booking Management System · 2026',
+    'footer-text':    'Lua Vang Resort & Spa · Booking Management System · 2026',
     /* ── room list ── */
     'btn-pick':       'Select',
     'unit-guests':    'guests',
