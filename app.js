@@ -1,3 +1,4 @@
+
 /* ============================================================
    LỤA VÀNG RESORT & SPA — BOOKING FRONTEND
    app.js — Search → Book → Cancel
@@ -52,13 +53,13 @@ function hideMsg(id) {
   el.innerHTML = "";
 }
 
-/** Disable a button and show "Đang xử lý…" while waiting. */
+/** Disable a button and show "Processing…" while waiting. */
 function setBusy(btnId, busy) {
   const btn = document.getElementById(btnId);
   btn.disabled = busy;
   if (busy) {
     btn.dataset.orig = btn.textContent;
-    btn.textContent  = "Đang xử lý…";
+    btn.textContent  = "Processing…";
   } else {
     btn.textContent = btn.dataset.orig || btn.textContent;
   }
@@ -72,9 +73,9 @@ function vnd(n) {
 
 function rateStr(low, high) {
   if (low && high && String(low) !== String(high))
-    return `${vnd(low)} – ${vnd(high)}/đêm`;
-  if (low)  return `${vnd(low)}/đêm`;
-  return "Liên hệ";
+    return `${vnd(low)} – ${vnd(high)}/night`;
+  if (low)  return `${vnd(low)}/night`;
+  return "Contact us";
 }
 
 const ROOM_TYPE_MAP = {
@@ -82,7 +83,7 @@ const ROOM_TYPE_MAP = {
   family: "Family", villa: "Villa", standard: "Standard",
 };
 function roomTypeName(t) {
-  return ROOM_TYPE_MAP[(t || "").toLowerCase()] || (t || "Phòng");
+  return ROOM_TYPE_MAP[(t || "").toLowerCase()] || (t || "Room");
 }
 
 // ── DATE INITIALISATION ──────────────────────────────────────
@@ -112,11 +113,11 @@ document.getElementById("search-btn").addEventListener("click", async () => {
 
   // — Validate inputs
   if (!checkIn || !checkOut) {
-    showMsg("search-status", "warning", "Vui lòng chọn cả ngày nhận và trả phòng.");
+    showMsg("search-status", "warning", "Please select both check-in and check-out dates.");
     return;
   }
   if (checkIn >= checkOut) {
-    showMsg("search-status", "error", "Ngày nhận phòng phải trước ngày trả phòng.");
+    showMsg("search-status", "error", "Check-in date must be before check-out date.");
     return;
   }
 
@@ -130,7 +131,7 @@ document.getElementById("search-btn").addEventListener("click", async () => {
 
   // — Call API
   setBusy("search-btn", true);
-  showMsg("search-status", "loading", "Đang kiểm tra phòng trống…");
+  showMsg("search-status", "loading", "Checking room availability…");
 
   try {
     const { ok, data } = await callFn("check_availability", {
@@ -140,7 +141,7 @@ document.getElementById("search-btn").addEventListener("click", async () => {
 
     if (!ok) {
       showMsg("search-status", "error",
-        data.error || "Không thể kết nối backend. Thử lại sau.");
+        data.error || "Unable to check room availability. Please try again later.");
       return;
     }
 
@@ -148,16 +149,16 @@ document.getElementById("search-btn").addEventListener("click", async () => {
 
     if (rooms.length === 0) {
       showMsg("search-status", "warning",
-        "Không có phòng trống trong khoảng thời gian này. Vui lòng chọn ngày khác.");
+        "No rooms are available for these dates. Please try different dates.");
       return;
     }
 
     showMsg("search-status", "success",
-      `Tìm thấy <strong>${rooms.length}</strong> phòng trống.`);
+      `Available rooms: <strong>${rooms.length}</strong>.`);
     renderRooms(rooms);
 
   } catch (err) {
-    showMsg("search-status", "error", `Lỗi kết nối: ${err.message}`);
+    showMsg("search-status", "error", `Connection error: ${err.message}`);
   } finally {
     setBusy("search-btn", false);
   }
@@ -179,10 +180,10 @@ function renderRooms(rooms) {
     row.innerHTML = `
       <div class="room-info">
         <h4>${roomTypeName(room.room_type)} &mdash; <span style="font-family:var(--sans);font-size:0.85rem">${room.room_id}</span></h4>
-        <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} người</div>
+        <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; Sleeps ${room.capacity}</div>
       </div>
       <div class="room-rate">${rateStr(room.rate_low, room.rate_high)}</div>
-      <button class="btn-select" data-id="${room.room_id}">Chọn</button>
+      <button class="btn-select" data-id="${room.room_id}">Select</button>
     `;
 
     list.appendChild(row);
@@ -229,22 +230,22 @@ document.getElementById("book-btn").addEventListener("click", async () => {
   // — Validate
   if (!roomId) {
     showMsg("book-status", "warning",
-      "Chưa chọn phòng. Tìm phòng ở bước 1 và nhấn &laquo;Chọn&raquo;.");
+      "No room selected. Go to Step 1 and click &laquo;Select&raquo; next to a room.");
     return;
   }
   if (!guestName) {
-    showMsg("book-status", "warning", "Vui lòng nhập tên khách lưu trú.");
+    showMsg("book-status", "warning", "Please enter the guest name.");
     return;
   }
   if (!searchDates.check_in || !searchDates.check_out) {
     showMsg("book-status", "warning",
-      "Chưa có ngày lưu trú. Quay lại bước 1 để tìm phòng.");
+      "No stay dates selected. Please search for rooms in Step 1 first.");
     return;
   }
 
   // — Call API
   setBusy("book-btn", true);
-  showMsg("book-status", "loading", "Đang tạo đặt phòng…");
+  showMsg("book-status", "loading", "Creating your booking…");
   document.getElementById("booking-result").classList.add("hidden");
 
   try {
@@ -258,18 +259,18 @@ document.getElementById("book-btn").addEventListener("click", async () => {
     // HTTP 409 — conflict
     if (status === 409) {
       showMsg("book-status", "error",
-        "Phòng này vừa có người đặt trùng ngày. Vui lòng chọn phòng khác.");
+        "This room is no longer available for the selected dates. Please choose another room.");
       return;
     }
 
     if (!ok) {
       showMsg("book-status", "error",
-        data.error || "Không thể tạo booking. Thử lại sau.");
+        data.error || "Unable to complete your booking. Please try again later.");
       return;
     }
 
     // Success
-    showMsg("book-status", "success", "Đặt phòng thành công. Lưu lại mã bên dưới.");
+    showMsg("book-status", "success", "Booking confirmed! Please save your booking ID below.");
     renderBookingPanel(data.booking_id, roomId, guestName,
       searchDates.check_in, searchDates.check_out);
 
@@ -277,7 +278,7 @@ document.getElementById("book-btn").addEventListener("click", async () => {
     document.getElementById("booking-id-input").value = data.booking_id;
 
   } catch (err) {
-    showMsg("book-status", "error", `Lỗi kết nối: ${err.message}`);
+    showMsg("book-status", "error", `Connection error: ${err.message}`);
   } finally {
     setBusy("book-btn", false);
   }
@@ -289,12 +290,12 @@ function renderBookingPanel(bookingId, roomId, guestName, checkIn, checkOut) {
   const copyId = "copy-bid-btn";
 
   panel.innerHTML = `
-    <div class="bp-label">Mã đặt phòng — lưu lại để dùng khi cần hủy</div>
+    <div class="bp-label">Booking ID — keep this number in case you need to cancel</div>
     <div class="bp-code">${bookingId}</div>
     <div class="bp-detail">
       ${roomId} &nbsp;·&nbsp; ${guestName} &nbsp;·&nbsp; ${checkIn} → ${checkOut}
     </div>
-    <button class="btn-copy" id="${copyId}">Sao chép mã</button>
+    <button class="btn-copy" id="${copyId}">Copy Booking ID</button>
   `;
 
   panel.classList.remove("hidden");
@@ -303,12 +304,12 @@ function renderBookingPanel(bookingId, roomId, guestName, checkIn, checkOut) {
     navigator.clipboard.writeText(bookingId)
       .then(() => {
         const btn = document.getElementById(copyId);
-        btn.textContent = "Đã sao chép ✓";
-        setTimeout(() => { btn.textContent = "Sao chép mã"; }, 2200);
+        btn.textContent = "Copied ✓";
+        setTimeout(() => { btn.textContent = "Copy Booking ID"; }, 2200);
       })
       .catch(() => {
         // Fallback for browsers that block clipboard API
-        prompt("Sao chép mã booking:", bookingId);
+        prompt("Copy your Booking ID:", bookingId);
       });
   });
 }
@@ -321,17 +322,17 @@ document.getElementById("cancel-btn").addEventListener("click", async () => {
   const bookingId = (document.getElementById("booking-id-input").value || "").trim();
 
   if (!bookingId) {
-    showMsg("cancel-status", "warning", "Vui lòng nhập mã đặt phòng cần hủy.");
+    showMsg("cancel-status", "warning", "Please enter the Booking ID you want to cancel.");
     return;
   }
 
   const confirmed = window.confirm(
-    `Xác nhận hủy đặt phòng:\n\n${bookingId}\n\nHành động này không thể hoàn tác.`
+    `Cancel this booking?\n\n${bookingId}\n\nThis action cannot be undone.`
   );
   if (!confirmed) return;
 
   setBusy("cancel-btn", true);
-  showMsg("cancel-status", "loading", "Đang xử lý hủy đặt phòng…");
+  showMsg("cancel-status", "loading", "Cancelling your booking…");
 
   try {
     const { ok, status, data } = await callFn("cancel_booking", {
@@ -340,27 +341,27 @@ document.getElementById("cancel-btn").addEventListener("click", async () => {
 
     if (status === 404) {
       showMsg("cancel-status", "error",
-        "Không tìm thấy booking này. Kiểm tra lại mã đặt phòng.");
+        "Booking not found. Please check the Booking ID and try again.");
       return;
     }
     if (status === 400) {
       showMsg("cancel-status", "warning",
-        data.error || "Booking này không ở trạng thái có thể hủy (đã hủy trước đó?).");
+        data.error || "This booking cannot be cancelled (it may already have been cancelled).");
       return;
     }
     if (!ok) {
       showMsg("cancel-status", "error",
-        data.error || "Không thể hủy booking. Thử lại sau.");
+        data.error || "Unable to cancel your booking. Please try again later.");
       return;
     }
 
     // Success
     showMsg("cancel-status", "success",
-      `Đã hủy thành công booking <strong>${bookingId}</strong>.`);
+      `Booking <strong>${bookingId}</strong> has been cancelled successfully.`);
     document.getElementById("booking-id-input").value = "";
 
   } catch (err) {
-    showMsg("cancel-status", "error", `Lỗi kết nối: ${err.message}`);
+    showMsg("cancel-status", "error", `Connection error: ${err.message}`);
   } finally {
     setBusy("cancel-btn", false);
   }
