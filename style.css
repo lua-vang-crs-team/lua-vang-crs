@@ -46,6 +46,7 @@ header {
   background: var(--forest);
   padding: 2.8rem 2rem 2.4rem;
   text-align: center;
+  position: relative; /* needed for lang-toggle positioning */
 }
 
 .hotel-name {
@@ -64,6 +65,52 @@ header {
   color: rgba(255,255,255,0.38);
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+/* ── LANGUAGE TOGGLE ─────────────────────────────────────────── */
+.lang-toggle {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.4rem;
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(201,169,75,0.28);
+  border-radius: 999px;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+
+.lang-opt {
+  padding: 0.28rem 0.72rem;
+  font-family: var(--sans);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.42);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1.6;
+}
+
+.lang-opt.active {
+  background: var(--gold);
+  color: var(--forest);
+  cursor: default;
+}
+
+.lang-opt:hover:not(.active) {
+  background: rgba(255,255,255,0.11);
+  color: rgba(255,255,255,0.78);
+}
+
+.lang-sep {
+  color: rgba(255,255,255,0.18);
+  font-size: 0.58rem;
+  padding: 0 0.05rem;
+  pointer-events: none;
+  line-height: 1;
 }
 
 /* ── MAIN LAYOUT ─────────────────────────────────────────────── */
@@ -204,7 +251,7 @@ input[readonly].has-value {
 }
 .btn-cancel:hover:not(:disabled) { background: var(--error-bg); }
 
-/* Small "Chọn" button in room rows */
+/* Small "Chọn / Select" button in room rows */
 .btn-select {
   padding: 0.32rem 0.8rem;
   border: 1px solid var(--gold);
@@ -366,6 +413,11 @@ footer {
   .date-arrow { display: none; }
   .room-row { flex-wrap: wrap; gap: 0.5rem; }
   .room-rate { min-width: unset; text-align: left; }
+
+  .lang-toggle {
+    top: 0.85rem;
+    right: 1rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
