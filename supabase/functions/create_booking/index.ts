@@ -50,15 +50,22 @@ Deno.serve(async (req: Request) => {
 
     const room_id =
       typeof body.room_id === "string" ? body.room_id.trim() : "";
-    const guest_name =
-      typeof body.guest_name === "string" ? body.guest_name.trim() : "";
     const check_in = body.check_in;
     const check_out = body.check_out;
 
-    // 1. Validate input
-    if (!room_id || !guest_name || !check_in || !check_out) {
+    // Accept a guests array; also support a single guest with email.
+    const guests = Array.isArray(body.guests)
+      ? body.guests
+      : [{
+          guest_name: body.guest_name,
+          email: body.email,
+          phone: body.phone,
+        }];
+
+    // 1. Validate booking input.
+    if (!room_id || !check_in || !check_out) {
       return respond({
-        error: "room_id, guest_name, check_in and check_out are required",
+        error: "room_id, check_in and check_out are required",
       }, 400);
     }
 
@@ -79,7 +86,42 @@ Deno.serve(async (req: Request) => {
       }, 400);
     }
 
-    // 2. Find Room
+    if (!Array.isArray(guests) || guests.length === 0) {
+      return respond({
+        error: "At least one guest is required",
+      }, 400);
+    }
+
+    const normalizedGuests = [];
+
+    for (const guest of guests) {
+      const guest_name =
+        typeof guest?.guest_name === "string"
+          ? guest.guest_name.trim()
+          : "";
+      const email =
+        typeof guest?.email === "string"
+          ? guest.email.trim().toLowerCase()
+          : "";
+      const phone =
+        typeof guest?.phone === "string"
+          ? guest.phone.trim()
+          : null;
+
+      if (!guest_name || !email) {
+        return respond({
+          error: "Every guest requires guest_name and email",
+        }, 400);
+      }
+
+      normalizedGuests.push({
+        guest_name,
+        email,
+        phone: phone || null,
+      });
+    }
+
+    // 2. Find Room.
     const { data: room, error: roomError } = await supabase
       .from("room")
       .select("room_id")
@@ -95,9 +137,9 @@ Deno.serve(async (req: Request) => {
       return respond({ error: "Room not found" }, 404);
     }
 
-    // 3. Search for overlapping confirmed bookings
+    // 3. Preserve the existing room-conflict rule.
     // Existing check_in < requested check_out
-    // AND existing check_out > requested check_in
+    // AND existing check_out > requested check_in.
     const { data: conflicts, error: conflictError } = await supabase
       .from("booking")
       .select("booking_id")
@@ -109,7 +151,9 @@ Deno.serve(async (req: Request) => {
 
     if (conflictError) {
       console.error("Conflict query failed:", conflictError.message);
-      return respond({ error: "Unable to check room availability" }, 500);
+      return respond({
+        error: "Unable to check room availability",
+      }, 500);
     }
 
     if (conflicts && conflicts.length > 0) {
@@ -118,33 +162,43 @@ Deno.serve(async (req: Request) => {
       }, 409);
     }
 
-    // 4. Insert booking only if no conflict exists
-    const booking_id = crypto.randomUUID();
+    // 4. Delegate Guest reuse/creation, Booking creation and
+    // booking_guests links to the database function.
+    // The SQL function checks conflicts again and locks the room,
+    // protecting against concurrent booking attempts.
+    const { data: result, error: rpcError } = await supabase.rpc(
+      "create_booking_with_guests",
+      {
+        p_room_id: room_id,
+        p_check_in: check_in,
+        p_check_out: check_out,
+        p_guests: normalizedGuests,
+      },
+    );
 
-    const { data: booking, error: insertError } = await supabase
-      .from("booking")
-      .insert({
-        booking_id,
-        room_id,
-        guest_name,
-        check_in,
-        check_out,
-        status: "confirmed",
-      })
-      .select("booking_id, room_id, guest_name, check_in, check_out, status")
-      .single();
-
-    if (insertError) {
-      console.error("Booking insert failed:", insertError.message);
-      return respond({ error: "Failed to create booking" }, 500);
+    if (rpcError) {
+      console.error("Guest booking RPC failed:", rpcError.message);
+      return respond({
+        error: "Failed to create booking",
+        details: rpcError.message,
+      }, 500);
     }
 
-    return respond({
-      success: true,
-      message: "Booking created successfully",
-      booking_id: booking.booking_id,
-      booking,
-    }, 201);
+    if (!result || typeof result !== "object") {
+      return respond({
+        error: "Invalid response from booking function",
+      }, 500);
+    }
+
+    const rpcResult = result as Record<string, unknown>;
+    const httpStatus =
+      typeof rpcResult.http_status === "number"
+        ? rpcResult.http_status
+        : 500;
+
+    const { http_status: _ignored, ...responseBody } = rpcResult;
+
+    return respond(responseBody, httpStatus);
   } catch (error) {
     console.error(
       "Unexpected create_booking error:",
