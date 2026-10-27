@@ -1,0 +1,65 @@
+/* ── STAFF RATE MANAGEMENT (4.2) ─────────────────────────────── */
+.rate-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.rate-select {
+  width: 100%;
+  padding: 0.68rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--white);
+}
+
+.rate-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.rate-card {
+  background: var(--ivory, #FAF8F5);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 1rem 0.9rem;
+  text-align: center;
+}
+
+.rate-card .rc-channel {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--forest);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rate-card .rc-mult {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.rate-card .rc-price {
+  font-family: var(--serif);
+  font-size: 1.55rem;
+  font-weight: 400;
+  color: var(--forest);
+  margin-top: 0.45rem;
+}
+
+@media (max-width: 700px) {
+  .rate-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .rate-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

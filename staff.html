@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Portal — Lụa Vàng Resort & Spa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="staff.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════ PIN OVERLAY ═══════════════════════ -->
+  <div id="pin-overlay" class="pin-overlay">
+    <div class="pin-card" id="pin-card">
+      <div class="pin-logo">Lụa Vàng</div>
+      <div class="pin-sub" data-i18n="pin-sub">Cổng nhân viên</div>
+      <div class="pin-field">
+        <input type="password" id="pin-input"
+               placeholder="••••"
+               maxlength="8"
+               autocomplete="off"
+               data-i18n-placeholder="pin-placeholder">
+      </div>
+      <button class="btn pin-btn" id="pin-btn" data-i18n="pin-btn">Đăng nhập</button>
+      <div id="pin-msg" class="msg hidden"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ HEADER ════════════════════════════ -->
+  <header>
+    <div class="header-inner">
+      <div class="hotel-name">Lụa Vàng</div>
+      <div class="hotel-sub" data-i18n-html="hotel-sub-staff">Resort &amp; Spa &ensp;·&ensp; Cổng nhân viên</div>
+    </div>
+    <div class="header-actions">
+      <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language / Ngôn ngữ">
+        <span class="lang-opt active" data-lang="vi">VI</span>
+        <span class="lang-sep">|</span>
+        <span class="lang-opt" data-lang="en">EN</span>
+      </div>
+      <button class="logout-btn" id="logout-btn" data-i18n="btn-logout">Đăng xuất</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════ DASHBOARD ═════════════════════════ -->
+  <main id="staff-main">
+
+    <!-- STATS ROW -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-arrivals">—</div>
+        <div class="stat-label" data-i18n="stat-arrivals">Đến hôm nay</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-departures">—</div>
+        <div class="stat-label" data-i18n="stat-departures">Rời hôm nay</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-occupied">—</div>
+        <div class="stat-label" data-i18n="stat-occupied">Đang lưu trú</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-available">—</div>
+        <div class="stat-label" data-i18n="stat-available">Phòng trống</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="bookings" data-i18n="tab-bookings">Quản lý booking</button>
+      <button class="tab-btn" data-tab="new-booking" data-i18n="tab-new-booking">Tạo booking mới</button>
+      <button class="tab-btn" data-tab="availability" data-i18n="tab-availability">Kiểm tra phòng</button>
+      <button class="tab-btn" data-tab="rates" data-i18n="tab-rates">Quản lý giá (4.2)</button>
+    </div>
+
+    <!-- ──────────── TAB 1: BOOKING MANAGEMENT ──────────── -->
+    <div class="tab-panel active" id="tab-bookings">
+      <div class="step">
+        <div class="search-row">
+          <input type="text" id="search-name"
+                 placeholder="Tên khách / Mã booking…"
+                 data-i18n-placeholder="ph-search">
+          <input type="date" id="search-date-from">
+          <input type="date" id="search-date-to">
+          <select id="search-status" class="select-input">
+            <option value=""            data-i18n="opt-all-status">Tất cả trạng thái</option>
+            <option value="confirmed"   data-i18n="opt-confirmed">Đã đặt</option>
+            <option value="checked_in"  data-i18n="opt-checked-in">Đang ở</option>
+            <option value="checked_out" data-i18n="opt-checked-out">Đã rời</option>
+            <option value="cancelled"   data-i18n="opt-cancelled">Đã hủy</option>
+          </select>
+          <button class="btn btn-primary" id="search-bookings-btn"
+                  data-i18n="btn-search-bookings">Tìm kiếm</button>
+        </div>
+
+        <div id="search-bookings-status" class="msg hidden"></div>
+        <div id="bookings-table-container"></div>
+      </div>
+    </div>
+
+    <!-- ──────────── TAB 2: NEW BOOKING ──────────── -->
+    <div class="tab-panel" id="tab-new-booking">
+      <div class="step">
+        <div class="step-tag" data-i18n="new-bk-tag">Tạo booking thủ công</div>
+        <h2 data-i18n="new-bk-h2">Đặt phòng cho khách</h2>
+
+        <div class="date-row">
+          <div class="field">
+            <label for="nb-check-in" data-i18n="label-checkin">Ngày nhận phòng</label>
+            <input type="date" id="nb-check-in">
+          </div>
+          <span class="date-arrow">→</span>
+          <div class="field">
+            <label for="nb-check-out" data-i18n="label-checkout">Ngày trả phòng</label>
+            <input type="date" id="nb-check-out">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="nb-search-btn"
+                data-i18n="btn-search-avail">Kiểm tra phòng trống</button>
+        <div id="nb-search-status" class="msg hidden"></div>
+        <div id="nb-rooms-container"></div>
+
+        <!-- Booking form — shown after room is selected -->
+        <div id="nb-book-form" class="nb-form hidden">
+          <div class="field">
+            <label for="nb-selected-room" data-i18n="label-room">Phòng đã chọn</label>
+            <input type="text" id="nb-selected-room" readonly
+                   placeholder="Chọn phòng từ danh sách"
+                   data-i18n-placeholder="ph-room">
+          </div>
+          <div class="field">
+            <label for="nb-guest-name" data-i18n="label-guest">Tên khách chính</label>
+            <input type="text" id="nb-guest-name"
+                   placeholder="Họ và tên đầy đủ (Ví dụ: John)"
+                   data-i18n-placeholder="ph-guest">
+          </div>
+          <div class="date-row">
+            <div class="field">
+              <label for="nb-guest-email">Email khách (4.3 Returning Guest)</label>
+              <input type="email" id="nb-guest-email" placeholder="john@email.com">
+            </div>
+            <div class="field">
+              <label for="nb-guest-phone">Số điện thoại</label>
+              <input type="tel" id="nb-guest-phone" placeholder="0901234567">
+            </div>
+          </div>
+          <div class="field">
+            <label for="nb-extra-guests">Khách đi cùng (4.3 Multi-Guest, nhập: Tên, Email)</label>
+            <input type="text" id="nb-extra-guests" placeholder="Ví dụ: Anna, anna@email.com">
+          </div>
+          <button class="btn btn-primary" id="nb-book-btn"
+                  data-i18n="btn-book">Xác nhận đặt phòng</button>
+          <div id="nb-book-status" class="msg hidden"></div>
+          <div id="nb-booking-result" class="booking-panel hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────── TAB 3: QUICK AVAILABILITY ──────────── -->
+    <div class="tab-panel" id="tab-availability">
+      <div class="step">
+        <div class="step-tag" data-i18n="avail-tag">Kiểm tra nhanh</div>
+        <h2 data-i18n="avail-h2">Phòng trống theo ngày</h2>
+
+        <div class="date-row">
+          <div class="field">
+            <label for="av-check-in" data-i18n="label-checkin">Ngày nhận phòng</label>
+            <input type="date" id="av-check-in">
+          </div>
+          <span class="date-arrow">→</span>
+          <div class="field">
+            <label for="av-check-out" data-i18n="label-checkout">Ngày trả phòng</label>
+            <input type="date" id="av-check-out">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="av-search-btn"
+                data-i18n="btn-search">Kiểm tra</button>
+        <div id="av-status" class="msg hidden"></div>
+        <div id="av-rooms-container"></div>
+      </div>
+    </div>
+
+    <!-- ──────────── TAB 4: STAFF RATE MANAGEMENT (4.2) ──────────── -->
+    <div class="tab-panel" id="tab-rates">
+      <div class="step">
+        <div class="step-tag" data-i18n="rate-tag">Quản trị doanh thu · 4.2 Rate Consistency</div>
+        <h2 data-i18n="rate-h2">Staff Rate Management</h2>
+
+        <div class="rate-form-grid">
+          <div class="field">
+            <label for="rate-room-type" data-i18n="label-room-type">Loại phòng (Room Type)</label>
+            <select id="rate-room-type" class="select-input rate-select">
+              <option value="Deluxe">Deluxe</option>
+              <option value="Superior">Superior</option>
+              <option value="Suite">Suite</option>
+              <option value="Family">Family</option>
+              <option value="Villa">Villa</option>
+              <option value="Standard">Standard</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="rate-base-input" data-i18n="label-base-rate">Giá cơ bản (Base Rate — VNĐ)</label>
+            <input type="number" id="rate-base-input" min="100000" step="50000" value="4000000" placeholder="Ví dụ: 4000000">
+          </div>
+
+          <div class="field">
+            <label for="rate-changed-by" data-i18n="label-changed-by">Người cập nhật (Changed By)</label>
+            <input type="text" id="rate-changed-by" value="staff_admin" placeholder="Tên nhân viên">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="update-rate-btn" data-i18n="btn-update-rate">Update Rate</button>
+        <div id="rate-status" class="msg hidden"></div>
+
+        <!-- KẾT QUẢ GIÁ THEO KÊNH (Direct, OTA1, OTA2, GDS) -->
+        <div class="rate-channels-section">
+          <div class="step-tag" style="margin-top:1.6rem" data-i18n="rate-preview-tag">Bảng giá phân phối tự động theo kênh</div>
+          <div class="rate-cards-grid" id="rate-cards-grid">
+            <div class="rate-card">
+              <div class="rc-channel">Direct Website</div>
+              <div class="rc-mult">× 0.95 (-5%)</div>
+              <div class="rc-price" id="price-direct">3.800.000 ₫</div>
+            </div>
+            <div class="rate-card">
+              <div class="rc-channel">OTA 1 (VietStay)</div>
+              <div class="rc-mult">× 1.05 (+5%)</div>
+              <div class="rc-price" id="price-ota1">4.200.000 ₫</div>
+            </div>
+            <div class="rate-card">
+              <div class="rc-channel">OTA 2 (StayAsia)</div>
+              <div class="rc-mult">× 1.05 (+5%)</div>
+              <div class="rc-price" id="price-ota2">4.200.000 ₫</div>
+            </div>
+            <div class="rate-card">
+              <div class="rc-channel">GDS</div>
+              <div class="rc-mult">× 1.00 (Chuẩn)</div>
+              <div class="rc-price" id="price-gds">4.000.000 ₫</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BẢNG LỊCH SỬ THAY ĐỔI GIÁ (RateHistory) -->
+        <div class="rate-history-section" style="margin-top:2rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+            <div class="step-tag" style="margin:0" data-i18n="rate-history-tag">Lịch sử thay đổi giá (RateHistory)</div>
+            <button class="action-btn checkin-btn" id="refresh-history-btn" type="button">Làm mới lịch sử</button>
+          </div>
+          <div id="rate-history-container"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Hệ thống quản lý nội bộ &ensp;·&ensp; 2026</p>
+  </footer>
+
+  <script src="staff.js"></script>
+</body>
+</html>
