@@ -160,8 +160,22 @@
                placeholder="Chọn phòng từ kết quả bên trên" readonly>
       </div>
       <div class="field">
-        <label for="guest-name">Tên khách lưu trú</label>
-        <input type="text" id="guest-name" placeholder="Họ và tên đầy đủ">
+        <label for="guest-name">Tên khách chính</label>
+        <input type="text" id="guest-name" placeholder="Ví dụ: John">
+      </div>
+      <div class="date-row">
+        <div class="field">
+          <label for="guest-email">Email nhận diện khách (4.3 Returning Guest)</label>
+          <input type="email" id="guest-email" placeholder="Ví dụ: john@email.com">
+        </div>
+        <div class="field">
+          <label for="guest-phone">Số điện thoại</label>
+          <input type="tel" id="guest-phone" placeholder="Ví dụ: 0901234567">
+        </div>
+      </div>
+      <div class="field">
+        <label for="extra-guests">Khách lưu trú cùng phòng (4.3 Multi-Guest, mỗi dòng: Tên, Email)</label>
+        <input type="text" id="extra-guests" placeholder="Ví dụ: Anna, anna@email.com">
       </div>
 
       <button class="btn btn-primary" id="book-btn">Xác nhận đặt phòng</button>
