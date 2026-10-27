@@ -9,16 +9,12 @@ const ANON_KEY     = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
 
-// ── THIS IS THE KEY DIFFERENTIATOR ──────────────────────────
+// Định danh kênh OTA 1 theo đúng API Contract của Bill (ĐÃ ĐỔI TỪ ota_2 THÀNH ota_1)
 const SOURCE_CHANNEL = "ota_1";
 
-// ── STATE ────────────────────────────────────────────────────
 let searchDates  = { check_in: null, check_out: null };
 let selectedRoom = null;
 
-// ── API HELPERS ──────────────────────────────────────────────
-
-/** POST to a Supabase Edge Function */
 async function callFn(name, body) {
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: "POST",
@@ -34,7 +30,6 @@ async function callFn(name, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
-/** GET from Supabase REST (direct table read) */
 async function restGet(table, params = "") {
   const res = await fetch(`${REST_BASE}/${table}${params}`, {
     headers: {
@@ -46,22 +41,16 @@ async function restGet(table, params = "") {
   return res.json();
 }
 
-// ── UI HELPERS ───────────────────────────────────────────────
-
 function showMsg(id, type, html) {
   const el = document.getElementById(id);
+  if (!el) return;
   el.className = `msg ${type}`;
   el.innerHTML = html;
 }
 
-function hideMsg(id) {
-  const el = document.getElementById(id);
-  el.className = "msg hidden";
-  el.innerHTML = "";
-}
-
 function setBusy(btnId, busy, label = "Đang xử lý…") {
   const btn = document.getElementById(btnId);
+  if (!btn) return;
   btn.disabled = busy;
   if (busy) {
     btn.dataset.orig = btn.textContent;
@@ -70,8 +59,6 @@ function setBusy(btnId, busy, label = "Đang xử lý…") {
     btn.textContent = btn.dataset.orig || btn.textContent;
   }
 }
-
-// ── FORMATTING ───────────────────────────────────────────────
 
 function vnd(n) {
   return Number(n).toLocaleString("vi-VN") + " ₫";
@@ -92,12 +79,11 @@ function roomTypeName(type) {
   return ROOM_TYPE_MAP[(type || "").toLowerCase()] || type || "Phòng";
 }
 
-// ── DATE INIT ────────────────────────────────────────────────
-
 (function initDates() {
   const today = new Date().toISOString().split("T")[0];
   const ciEl  = document.getElementById("check-in");
   const coEl  = document.getElementById("check-out");
+  if (!ciEl || !coEl) return;
   ciEl.min = today;
   coEl.min = today;
   ciEl.addEventListener("change", () => {
@@ -106,24 +92,25 @@ function roomTypeName(type) {
   });
 })();
 
-// ── INVENTORY LOADING ────────────────────────────────────────
-/**
- * Try to load channel_inventory for ota_1 from Supabase.
- * If the table doesn't exist yet, silently keep the placeholder dashes.
- */
 async function loadInventory() {
   try {
     const rows = await restGet(
       "channel_inventory",
-      `?channel=eq.${SOURCE_CHANNEL}&select=room_type,available_count,updated_at`
+      `?channel=eq.${SOURCE_CHANNEL}&select=room_type,available_count,updated_at&order=updated_at.desc`
     );
 
-    if (!rows || rows.length === 0) return; // table empty or not seeded yet
+    if (!rows || rows.length === 0) return;
+
+    const latestByType = new Map();
+    rows.forEach(r => {
+      const key = (r.room_type || "").toLowerCase();
+      if (!latestByType.has(key)) latestByType.set(key, r);
+    });
 
     const grid = document.getElementById("inv-grid");
-    grid.innerHTML = ""; // clear placeholders
+    grid.innerHTML = "";
 
-    rows.forEach(row => {
+    latestByType.forEach(row => {
       const count = Number(row.available_count);
       const cls   = count === 0 ? "sold" : count <= 2 ? "low" : "";
       const card  = document.createElement("div");
@@ -136,22 +123,16 @@ async function loadInventory() {
       grid.appendChild(card);
     });
 
-    // Show last updated time
-    const latest = rows.reduce((a, b) =>
-      (a.updated_at > b.updated_at ? a : b), rows[0]);
+    const latest = rows[0];
     if (latest?.updated_at) {
       const d = new Date(latest.updated_at);
       document.getElementById("inv-updated").textContent =
         `cập nhật ${d.toLocaleTimeString("vi-VN")} ngày ${d.toLocaleDateString("vi-VN")}`;
     }
-
   } catch (err) {
-    // channel_inventory table may not exist yet — keep placeholders
     document.getElementById("inv-updated").textContent = "chưa đồng bộ";
   }
 }
-
-// ── SEARCH ───────────────────────────────────────────────────
 
 document.getElementById("search-btn").addEventListener("click", async () => {
   const checkIn  = document.getElementById("check-in").value;
@@ -180,6 +161,7 @@ document.getElementById("search-btn").addEventListener("click", async () => {
     const { ok, data } = await callFn("check_availability", {
       check_in:  checkIn,
       check_out: checkOut,
+      source_channel: SOURCE_CHANNEL,
     });
 
     if (!ok) {
@@ -188,7 +170,6 @@ document.getElementById("search-btn").addEventListener("click", async () => {
     }
 
     const rooms = data.available_rooms || [];
-
     if (rooms.length === 0) {
       showMsg("search-status", "warning",
         "Không có phòng trống trong khoảng thời gian này. Vui lòng chọn ngày khác.");
@@ -198,7 +179,6 @@ document.getElementById("search-btn").addEventListener("click", async () => {
     showMsg("search-status", "success",
       `Tìm thấy <strong>${rooms.length}</strong> phòng trống.`);
     renderRooms(rooms);
-
   } catch (err) {
     showMsg("search-status", "error", `Lỗi kết nối: ${err.message}`);
   } finally {
@@ -252,18 +232,53 @@ function pickRoom(room, listEl) {
     .scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ── BOOK ─────────────────────────────────────────────────────
+function buildGuestPayload() {
+  const rawName   = (document.getElementById("guest-name")?.value || "").trim();
+  const rawEmail  = (document.getElementById("guest-email")?.value || "").trim();
+  const rawPhone  = (document.getElementById("guest-phone")?.value || "").trim();
+  const extraRaw  = (document.getElementById("extra-guests")?.value || "").trim();
+
+  const guests = [];
+  if (rawName) {
+    guests.push({
+      guest_name: rawName,
+      email: rawEmail || undefined,
+      phone: rawPhone || undefined,
+    });
+  }
+
+  if (extraRaw) {
+    extraRaw.split(/\n|;/).map(s => s.trim()).filter(Boolean).forEach(line => {
+      const parts = line.split(",").map(p => p.trim());
+      if (parts[0]) {
+        guests.push({
+          guest_name: parts[0],
+          email: parts[1] || undefined,
+          phone: parts[2] || undefined,
+        });
+      }
+    });
+  }
+
+  return {
+    guest_name: rawName,
+    email:      rawEmail || undefined,
+    phone:      rawPhone || undefined,
+    guest:      guests[0] || { guest_name: rawName },
+    guests:     guests,
+  };
+}
 
 document.getElementById("book-btn").addEventListener("click", async () => {
-  const roomId    = (document.getElementById("selected-room").value || "").trim();
-  const guestName = (document.getElementById("guest-name").value   || "").trim();
+  const roomId       = (document.getElementById("selected-room").value || "").trim();
+  const guestPayload = buildGuestPayload();
 
   if (!roomId) {
     showMsg("book-status", "warning",
       'Chưa chọn phòng. Tìm phòng ở bước 1 và nhấn «Chọn».');
     return;
   }
-  if (!guestName) {
+  if (!guestPayload.guest_name) {
     showMsg("book-status", "warning", "Vui lòng nhập tên khách lưu trú.");
     return;
   }
@@ -279,15 +294,16 @@ document.getElementById("book-btn").addEventListener("click", async () => {
   try {
     const { ok, status, data } = await callFn("create_booking", {
       room_id:        roomId,
-      guest_name:     guestName,
       check_in:       searchDates.check_in,
       check_out:      searchDates.check_out,
-      source_channel: SOURCE_CHANNEL,      // ← OTA 1 identifier
+      source_channel: SOURCE_CHANNEL,
+      ...guestPayload,
     });
 
     if (status === 409) {
       showMsg("book-status", "error",
-        "Phòng này vừa có người đặt trùng ngày. Vui lòng chọn phòng khác.");
+        "HTTP 409 Conflict: Phòng này vừa có người đặt trùng ngày. Vui lòng chọn phòng khác.");
+      loadInventory();
       return;
     }
     if (!ok) {
@@ -295,14 +311,13 @@ document.getElementById("book-btn").addEventListener("click", async () => {
       return;
     }
 
+    const allNames = guestPayload.guests.map(g => g.guest_name).join(", ");
     showMsg("book-status", "success", "Đặt phòng thành công. Lưu lại mã bên dưới.");
-    renderBookingPanel(data.booking_id, roomId, guestName,
+    renderBookingPanel(data.booking_id, roomId, allNames,
       searchDates.check_in, searchDates.check_out);
     document.getElementById("booking-id-input").value = data.booking_id;
 
-    // Refresh inventory after booking
     loadInventory();
-
   } catch (err) {
     showMsg("book-status", "error", `Lỗi kết nối: ${err.message}`);
   } finally {
@@ -336,8 +351,6 @@ function renderBookingPanel(bookingId, roomId, guestName, checkIn, checkOut) {
   });
 }
 
-// ── CANCEL ───────────────────────────────────────────────────
-
 document.getElementById("cancel-btn").addEventListener("click", async () => {
   const bookingId = (document.getElementById("booking-id-input").value || "").trim();
 
@@ -356,7 +369,8 @@ document.getElementById("cancel-btn").addEventListener("click", async () => {
 
   try {
     const { ok: reqOk, status, data } = await callFn("cancel_booking", {
-      booking_id: bookingId,
+      booking_id:     bookingId,
+      source_channel: SOURCE_CHANNEL,
     });
 
     if (status === 404) {
@@ -378,9 +392,7 @@ document.getElementById("cancel-btn").addEventListener("click", async () => {
       `Đã hủy thành công booking <strong>${bookingId}</strong>.`);
     document.getElementById("booking-id-input").value = "";
 
-    // Refresh inventory after cancel
     loadInventory();
-
   } catch (err) {
     showMsg("cancel-status", "error", `Lỗi kết nối: ${err.message}`);
   } finally {
@@ -388,5 +400,5 @@ document.getElementById("cancel-btn").addEventListener("click", async () => {
   }
 });
 
-// ── INIT ─────────────────────────────────────────────────────
 loadInventory();
+setInterval(loadInventory, 30000);
