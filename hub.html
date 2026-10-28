@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lụa Vàng CRS — Demo Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ── DESIGN TOKENS (consistent with style.css) ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --forest:      #0B2D23;
+      --forest-mid:  #163E30;
+      --gold:        #C9A94B;
+      --gold-dim:    #8A7035;
+      --gold-pale:   #F5EDD5;
+      --ivory:       #F2EFE8;
+      --white:       #FFFFFF;
+      --ink:         #1E1A17;
+      --muted:       #6B6158;
+      --border:      #DDD8CF;
+      --border-soft: #EDE9E2;
+      --shadow:      0 1px 4px rgba(0,0,0,0.07);
+      --radius:      3px;
+
+      /* channel accent colors */
+      --c-direct: #C9A94B;
+      --c-ota1:   #E07B39;
+      --c-ota2:   #27AE60;
+      --c-staff:  #5C8BCA;
+
+      --serif: 'Cormorant Garamond', Georgia, serif;
+      --sans:  'DM Sans', system-ui, sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--ivory);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--forest);
+      padding: 2.6rem 2rem 2.2rem;
+      text-align: center;
+    }
+
+    .hotel-name {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 2.8rem;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+
+    .hotel-sub {
+      margin-top: 0.5rem;
+      font-size: 0.68rem;
+      font-weight: 400;
+      color: rgba(255,255,255,0.38);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    /* ── MAIN ── */
+    main {
+      flex: 1;
+      max-width: 860px;
+      margin: 2.5rem auto 4rem;
+      padding: 0 1.5rem;
+      width: 100%;
+    }
+
+    .hub-intro {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .hub-intro h2 {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 1.55rem;
+      color: var(--forest);
+      margin-bottom: 0.5rem;
+    }
+
+    .hub-intro p {
+      font-size: 0.83rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── ARCHITECTURE NOTE ── */
+    .arch-note {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 0.85rem 1.2rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+
+    .arch-note strong { color: var(--forest); }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+    }
+
+    .arch-flow .node {
+      background: var(--ivory);
+      border: 1px solid var(--border-soft);
+      padding: 0.2rem 0.55rem;
+      border-radius: 2px;
+      font-weight: 500;
+      color: var(--forest);
+      white-space: nowrap;
+    }
+
+    .arch-flow .arrow {
+      color: var(--gold-dim);
+      font-size: 0.7rem;
+    }
+
+    /* ── PORTAL GRID ── */
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.1rem;
+    }
+
+    .portal-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.6rem 1.8rem 1.5rem;
+      text-decoration: none;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .portal-card::after {
+      content: "→";
+      position: absolute;
+      right: 1.4rem;
+      bottom: 1.4rem;
+      font-size: 1.1rem;
+      color: var(--border);
+      transition: color 0.15s, right 0.15s;
+    }
+
+    .portal-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    .portal-card:hover::after {
+      right: 1.1rem;
+    }
+
+    /* channel accent border + arrow colors */
+    .card-direct { border-top-color: var(--c-direct); }
+    .card-direct:hover::after { color: var(--c-direct); }
+
+    .card-ota1 { border-top-color: var(--c-ota1); }
+    .card-ota1:hover::after { color: var(--c-ota1); }
+
+    .card-ota2 { border-top-color: var(--c-ota2); }
+    .card-ota2:hover::after { color: var(--c-ota2); }
+
+    .card-staff { border-top-color: var(--c-staff); }
+    .card-staff:hover::after { color: var(--c-staff); }
+
+    .card-channel-tag {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .channel-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .card-direct .channel-dot { background: var(--c-direct); }
+    .card-ota1   .channel-dot { background: var(--c-ota1); }
+    .card-ota2   .channel-dot { background: var(--c-ota2); }
+    .card-staff  .channel-dot { background: var(--c-staff); }
+
+    .card-name {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 1.7rem;
+      color: var(--forest);
+      line-height: 1.1;
+    }
+
+    .card-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .card-badges {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: 0.2rem;
+    }
+
+    .badge {
+      font-size: 0.63rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 0.18rem 0.5rem;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+
+    .badge-core   { background: #EAF4EE; color: #1A5832; }
+    .badge-ext41  { background: #E8EFF8; color: #0F2B5B; }
+    .badge-ext42  { background: #FEF3E8; color: #7A3800; }
+    .badge-ext43  { background: #F0EAF8; color: #4A1A7A; }
+    .badge-staff  { background: #F0F4F8; color: #2C4A6B; }
+
+    /* ── PIN HINT ── */
+    .pin-hint-row {
+      margin-top: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .pin-box {
+      font-family: 'Courier New', monospace;
+      background: var(--ivory);
+      border: 1px solid var(--border-soft);
+      padding: 0.12rem 0.45rem;
+      border-radius: 2px;
+      letter-spacing: 0.15em;
+      color: var(--forest);
+      font-weight: 600;
+    }
+
+    /* ── SUPABASE INFO ROW ── */
+    .info-row {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+    }
+
+    .info-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .info-card .ic-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .info-card .ic-value {
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem;
+      color: var(--forest);
+      word-break: break-all;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2rem 2.5rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .portal-grid { grid-template-columns: 1fr; }
+      .info-row    { grid-template-columns: 1fr; }
+      .arch-note   { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="hotel-name">Lụa Vàng</div>
+    <div class="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Central Reservation System &ensp;·&ensp; Demo Hub</div>
+  </header>
+
+  <main>
+
+    <div class="hub-intro">
+      <h2>Cổng điều hướng hệ thống CRS</h2>
+      <p>Truy cập nhanh các phân hệ frontend. Tất cả đều kết nối về cùng một Supabase backend.</p>
+    </div>
+
+    <!-- Architecture flow note -->
+    <div class="arch-note">
+      <strong>Luồng dữ liệu:</strong>
+      <div class="arch-flow">
+        <span class="node">Direct / OTA 1 / OTA 2</span>
+        <span class="arrow">→</span>
+        <span class="node">Supabase Edge Functions</span>
+        <span class="arrow">→</span>
+        <span class="node">PostgreSQL Database</span>
+        <span class="arrow">→</span>
+        <span class="node">OTA 1 &amp; OTA 2 inventory update</span>
+      </div>
+    </div>
+
+    <!-- Portal cards -->
+    <div class="portal-grid">
+
+      <!-- Direct Website -->
+      <a href="index.html" class="portal-card card-direct">
+        <div class="card-channel-tag">
+          <span class="channel-dot"></span>
+          Direct Channel &ensp;·&ensp; source_channel: direct
+        </div>
+        <div class="card-name">Direct Website</div>
+        <div class="card-desc">
+          Trang đặt phòng trực tiếp cho khách. Search phòng trống → Book → nhận Booking ID → Cancel.
+        </div>
+        <div class="card-badges">
+          <span class="badge badge-core">Core 7.5đ</span>
+          <span class="badge badge-core">Search</span>
+          <span class="badge badge-core">Book</span>
+          <span class="badge badge-core">Cancel</span>
+        </div>
+      </a>
+
+      <!-- OTA 1 -->
+      <a href="ota1.html" class="portal-card card-ota1">
+        <div class="card-channel-tag">
+          <span class="channel-dot"></span>
+          OTA Channel 1 &ensp;·&ensp; source_channel: ota_1
+        </div>
+        <div class="card-name">VietStay</div>
+        <div class="card-desc">
+          OTA giả lập thứ nhất. Hiển thị inventory theo thời gian thực từ CRS. Book/Cancel đồng bộ ngược về.
+        </div>
+        <div class="card-badges">
+          <span class="badge badge-ext41">4.1 Channel</span>
+          <span class="badge badge-ext41">Inventory Sync</span>
+        </div>
+      </a>
+
+      <!-- OTA 2 -->
+      <a href="ota2.html" class="portal-card card-ota2">
+        <div class="card-channel-tag">
+          <span class="channel-dot"></span>
+          OTA Channel 2 &ensp;·&ensp; source_channel: ota_2
+        </div>
+        <div class="card-name">StayAsia</div>
+        <div class="card-desc">
+          OTA giả lập thứ hai. Hỗ trợ nhận diện khách quay lại (email/phone) và đặt phòng nhiều khách.
+        </div>
+        <div class="card-badges">
+          <span class="badge badge-ext41">4.1 Channel</span>
+          <span class="badge badge-ext43">4.3 Returning Guest</span>
+          <span class="badge badge-ext43">4.3 Multi-Guest</span>
+        </div>
+      </a>
+
+      <!-- Staff Portal -->
+      <a href="staff.html" class="portal-card card-staff">
+        <div class="card-channel-tag">
+          <span class="channel-dot"></span>
+          Nội bộ &ensp;·&ensp; Yêu cầu mã PIN
+        </div>
+        <div class="card-name">Staff Portal</div>
+        <div class="card-desc">
+          Dành cho nhân viên. Quản lý booking, tạo booking thủ công, kiểm tra phòng, cập nhật Base Rate.
+        </div>
+        <div class="card-badges">
+          <span class="badge badge-ext42">4.2 Rate Consistency</span>
+          <span class="badge badge-staff">Booking Manager</span>
+        </div>
+        <div class="pin-hint-row">
+          Mã truy cập: <span class="pin-box">2026</span>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Supabase info -->
+    <div class="info-row">
+      <div class="info-card">
+        <div class="ic-label">Supabase Project</div>
+        <div class="ic-value">scxjezoysmwyumyebuls</div>
+      </div>
+      <div class="info-card">
+        <div class="ic-label">Edge Functions</div>
+        <div class="ic-value">check_availability · create_booking · cancel_booking · update_base_rate</div>
+      </div>
+      <div class="info-card">
+        <div class="ic-label">GitHub Repo</div>
+        <div class="ic-value">ttanh-cmd / lua-vang-crs</div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Mini CRS Final Project &ensp;·&ensp; UEH 26C1_HTTTKS &ensp;·&ensp; 2026</p>
+  </footer>
+
+</body>
+</html>
