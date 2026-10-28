@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
-    /* ── StayAsia OTA 2 brand overrides ── */
+    /* ── StayAsia brand tokens ── */
     :root {
       --forest:     #1A3326;
       --forest-mid: #234737;
@@ -19,77 +19,140 @@
     }
 
     /* ── Inventory panel ── */
-    .inventory-panel {
+    .ota-panel {
       background: var(--white);
       border: 1px solid var(--border);
-      border-left: 3px solid var(--gold);
-      border-radius: 0 var(--radius) var(--radius) 0;
-      padding: 1.5rem 2rem;
+      border-radius: var(--radius);
+      padding: 1.6rem 2rem;
       box-shadow: var(--shadow);
     }
-    .inv-meta {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 0.25rem;
+
+    .ota-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
+
+    .ota-panel-title {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 1.45rem;
+      color: var(--forest);
+      line-height: 1.2;
+    }
+
+    .ota-sync-badge {
+      font-size: 0.66rem;
+      font-weight: 500;
+      color: var(--muted);
+      background: var(--ivory);
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      padding: 0.22rem 0.65rem;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      align-self: center;
+    }
+    .ota-sync-badge.live::before {
+      content: "● ";
+      color: #1A8040;
+      font-size: 0.6rem;
+    }
+
     .inv-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 0.75rem;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.65rem;
       margin-top: 1.1rem;
     }
+
     .inv-card {
       background: var(--ivory);
       border: 1px solid var(--border-soft);
       border-radius: var(--radius);
-      padding: 0.75rem 0.9rem;
+      padding: 0.75rem 0.5rem;
       text-align: center;
+      transition: border-color 0.14s;
     }
-    .inv-card .inv-type {
-      font-size: 0.7rem;
+    .inv-card:hover { border-color: var(--gold); }
+
+    .inv-type {
+      font-size: 0.64rem;
       font-weight: 500;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
     }
-    .inv-card .inv-count {
+
+    .inv-count {
       font-family: var(--serif);
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: 300;
       color: var(--forest);
       line-height: 1.1;
-      margin-top: 0.2rem;
+      margin-top: 0.15rem;
     }
-    .inv-card .inv-sub {
+
+    .inv-sub {
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 0.05rem;
+    }
+
+    .inv-card.low  .inv-count { color: #7A5500; }
+    .inv-card.sold .inv-count { color: #8B1A10; }
+    .inv-card.sold { border-color: #e8c0bc; background: #fdf5f5; }
+
+    .ota-footer-note {
+      margin-top: 0.8rem;
       font-size: 0.67rem;
       color: var(--muted);
     }
-    .inv-card.low  .inv-count { color: #1A5C30; }
-    .inv-card.sold .inv-count { color: #8B1A10; }
 
-    .inv-footer {
-      margin-top: 0.8rem;
-      font-size: 0.68rem;
-      color: var(--muted);
-    }
-
-    /* ── OTA badge in header ── */
+    /* ── OTA badge ── */
     .ota-badge {
       display: inline-block;
-      margin-top: 0.55rem;
-      padding: 0.18rem 0.6rem;
+      margin-top: 0.5rem;
+      padding: 0.2rem 0.65rem;
       background: var(--gold);
       color: #fff;
       font-family: var(--sans);
-      font-size: 0.6rem;
+      font-size: 0.59rem;
       font-weight: 600;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       border-radius: 2px;
     }
 
-    @media (max-width: 540px) {
-      .inv-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+    /* ── 4.3 Guest section ── */
+    .guest-section-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin: 1.2rem 0 0.7rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-soft);
+    }
+
+    .guest-section-label span {
+      background: var(--gold-pale);
+      color: var(--gold-dim);
+      padding: 0.1rem 0.4rem;
+      border-radius: 2px;
+      font-size: 0.64rem;
+    }
+
+    main { gap: 1.6rem; }
+
+    @media (max-width: 700px) {
+      .inv-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 400px) {
+      .inv-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -99,36 +162,36 @@
     <div class="header-inner">
       <div class="hotel-name">StayAsia</div>
       <div class="hotel-sub">Nền tảng đặt phòng uy tín Châu Á &ensp;·&ensp; OTA Channel 2</div>
-      <div><span class="ota-badge">Kết nối với Lụa Vàng CRS</span></div>
+      <div><span class="ota-badge">Powered by Lụa Vàng CRS</span></div>
     </div>
   </header>
 
   <main>
 
-    <!-- ── INVENTORY OVERVIEW ── -->
-    <section class="inventory-panel" id="inventory-section">
-      <div class="step-tag">Tình trạng phòng</div>
-      <h2 style="font-family:var(--serif);font-weight:300;font-size:1.5rem;color:var(--forest);margin-bottom:0">
-        Lụa Vàng Resort &amp; Spa
-      </h2>
-      <p class="inv-meta">Cập nhật tự động từ hệ thống CRS · <span id="inv-updated">đang tải…</span></p>
-      <div class="inv-grid" id="inv-grid">
-        <!-- filled by ota2.js -->
-        <div class="inv-card"><div class="inv-type">Deluxe</div><div class="inv-count">—</div><div class="inv-sub">phòng</div></div>
-        <div class="inv-card"><div class="inv-type">Superior</div><div class="inv-count">—</div><div class="inv-sub">phòng</div></div>
-        <div class="inv-card"><div class="inv-type">Suite</div><div class="inv-count">—</div><div class="inv-sub">phòng</div></div>
-        <div class="inv-card"><div class="inv-type">Family</div><div class="inv-count">—</div><div class="inv-sub">phòng</div></div>
-        <div class="inv-card"><div class="inv-type">Villa</div><div class="inv-count">—</div><div class="inv-sub">phòng</div></div>
-        <div class="inv-card"><div class="inv-type">Standard</div><div class="inv-count">—</div><div class="inv-sub">phòng</div></div>
+    <!-- ── LIVE INVENTORY ── -->
+    <section class="ota-panel" id="inventory-section">
+      <div class="ota-panel-header">
+        <div>
+          <div class="step-tag" style="margin-bottom:0.3rem">Tình trạng phòng</div>
+          <div class="ota-panel-title">Lụa Vàng Resort &amp; Spa</div>
+        </div>
+        <div class="ota-sync-badge live" id="inv-updated">Đang tải…</div>
       </div>
-      <div class="inv-footer">Dữ liệu được cung cấp bởi Lụa Vàng CRS · Tự động làm mới mỗi 30 giây</div>
+      <div class="inv-grid" id="inv-grid">
+        <div class="inv-card"><div class="inv-type">Deluxe</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Superior</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Suite</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Family</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Villa</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Standard</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+      </div>
+      <div class="ota-footer-note">Đồng bộ tự động từ Lụa Vàng CRS · Làm mới mỗi 30 giây</div>
     </section>
 
     <!-- ── STEP 1: SEARCH ── -->
     <section class="step" id="search-section">
       <div class="step-tag">Bước 1</div>
       <h2>Tìm phòng trống</h2>
-
       <div class="date-row">
         <div class="field">
           <label for="check-in">Ngày nhận phòng</label>
@@ -140,13 +203,12 @@
           <input type="date" id="check-out">
         </div>
       </div>
-
       <button class="btn btn-primary" id="search-btn">Kiểm tra phòng trống</button>
       <div id="search-status" class="msg hidden"></div>
       <div id="rooms-container"></div>
     </section>
 
-    <!-- ── STEP 2: BOOK ── -->
+    <!-- ── STEP 2: BOOK (với 4.3 Guest fields) ── -->
     <section class="step" id="book-section">
       <div class="step-tag">Bước 2</div>
       <h2>Xác nhận đặt phòng</h2>
@@ -156,9 +218,36 @@
         <input type="text" id="selected-room"
                placeholder="Chọn phòng từ kết quả bên trên" readonly>
       </div>
+
+      <!-- Khách chính -->
       <div class="field">
         <label for="guest-name">Tên khách lưu trú</label>
         <input type="text" id="guest-name" placeholder="Họ và tên đầy đủ">
+      </div>
+
+      <!-- 4.3 Returning Guest: email + phone -->
+      <div class="guest-section-label">
+        Nhận dạng khách <span>4.3 Returning Guest</span>
+      </div>
+      <div class="date-row">
+        <div class="field">
+          <label for="guest-email">Email khách</label>
+          <input type="email" id="guest-email" placeholder="john@email.com">
+        </div>
+        <div class="field">
+          <label for="guest-phone">Số điện thoại</label>
+          <input type="tel" id="guest-phone" placeholder="0901 234 567">
+        </div>
+      </div>
+
+      <!-- 4.3 Multi-Guest -->
+      <div class="guest-section-label">
+        Khách đi cùng <span>4.3 Multi-Guest</span>
+      </div>
+      <div class="field">
+        <label for="extra-guests">Nhập từng khách, phân cách bằng dấu chấm phẩy</label>
+        <input type="text" id="extra-guests"
+               placeholder="Anna Nguyễn, anna@email.com; Tom Trần, tom@email.com">
       </div>
 
       <button class="btn btn-primary" id="book-btn">Xác nhận đặt phòng</button>
@@ -170,13 +259,11 @@
     <section class="step" id="cancel-section">
       <div class="step-tag">Hủy đặt phòng</div>
       <h2>Nhập mã để hủy</h2>
-
       <div class="field">
         <label for="booking-id-input">Mã đặt phòng (Booking ID)</label>
         <input type="text" id="booking-id-input"
                placeholder="Dán mã đặt phòng vào đây…">
       </div>
-
       <button class="btn btn-cancel" id="cancel-btn">Hủy đặt phòng</button>
       <div id="cancel-status" class="msg hidden"></div>
     </section>

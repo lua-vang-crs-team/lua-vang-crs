@@ -1,65 +1,534 @@
-/* ── STAFF RATE MANAGEMENT (4.2) ─────────────────────────────── */
+/* ============================================================
+   LỤA VÀNG RESORT & SPA — STAFF PORTAL
+   staff.css
+   ============================================================ */
+
+/* ── PIN GATE OVERLAY ───────────────────────────────────────── */
+.pin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(11, 45, 35, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.pin-overlay.hidden { display: none; }
+
+.pin-card {
+  background: var(--white);
+  border-radius: 6px;
+  padding: 2.8rem 3rem 2.4rem;
+  width: 360px;
+  max-width: 92vw;
+  text-align: center;
+  box-shadow: 0 16px 56px rgba(0,0,0,0.4);
+  border-top: 3px solid var(--gold);
+}
+
+/* Shake animation for wrong PIN */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-8px); }
+  40%      { transform: translateX(8px); }
+  60%      { transform: translateX(-6px); }
+  80%      { transform: translateX(6px); }
+}
+.pin-card.shake { animation: shake 0.38s ease; }
+
+.pin-logo {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 2.4rem;
+  color: var(--forest);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.pin-divider {
+  width: 2rem;
+  height: 1px;
+  background: var(--gold);
+  margin: 0.9rem auto 0.7rem;
+}
+
+.pin-sub {
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.pin-field {
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.pin-field input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  letter-spacing: 0.5em;
+  font-size: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  background: var(--ivory);
+  color: var(--ink);
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+.pin-field input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2.5px rgba(201,169,75,0.16);
+}
+
+.pin-btn {
+  width: 100%;
+  padding: 0.78rem 1rem;
+  background: var(--forest);
+  color: var(--white);
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.pin-btn:hover { background: var(--forest-mid); }
+
+.pin-hint {
+  margin-top: 1rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* ── HEADER: ACTIONS (LANG TOGGLE + LOGOUT) ─────────────────── */
+.header-actions {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logout-btn {
+  padding: 0.26rem 0.75rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.65);
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s;
+}
+.logout-btn:hover { background: rgba(255,255,255,0.16); color: rgba(255,255,255,0.9); }
+
+/* ── STAFF DASHBOARD: STATS ROW ─────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 1.15rem 1.4rem 1.1rem;
+  box-shadow: var(--shadow);
+}
+
+.stat-num {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 2.8rem;
+  color: var(--forest);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.stat-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.45rem;
+}
+
+/* ── TABS ────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  flex-shrink: 0;
+  padding: 0.72rem 1.2rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tab-btn:hover:not(.active) { color: var(--forest); }
+.tab-btn.active {
+  color: var(--forest);
+  border-bottom-color: var(--gold);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── BOOKING SEARCH ROW ─────────────────────────────────────── */
+.search-row {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 1.3rem;
+}
+
+.search-row input,
+.search-row select {
+  padding: 0.58rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--ink);
+  background: var(--white);
+  transition: border-color 0.14s;
+}
+.search-row input:focus,
+.search-row select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.search-row input[id="search-name"] { flex: 2 1 200px; }
+.search-row input[type="date"]      { flex: 1 1 140px; }
+.search-row select                  { flex: 1 1 160px; }
+
+.select-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B6158' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+}
+
+/* ── BOOKINGS TABLE ─────────────────────────────────────────── */
+.bookings-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.bookings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  min-width: 680px;
+}
+
+.bookings-table thead {
+  background: var(--forest);
+}
+
+.bookings-table th {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.82);
+  white-space: nowrap;
+}
+
+.bookings-table td {
+  padding: 0.62rem 1rem;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+  color: var(--ink);
+}
+
+.bookings-table tbody tr:last-child td { border-bottom: none; }
+.bookings-table tbody tr:hover { background: #FAFAF5; }
+
+/* booking ID monospace */
+.bookings-table td.col-id {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── STATUS BADGES ──────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 0.18rem 0.58rem;
+  border-radius: 2px;
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badge-confirmed    { background: #EAF4EE; color: #1A5832; }
+.badge-checked-in   { background: #E8EFF8; color: #0F2B5B; }
+.badge-checked-out  { background: #F0F0F0; color: #555; }
+.badge-cancelled    { background: #FCECEA; color: #8B1A10; }
+
+/* ── TABLE ACTION BUTTONS ───────────────────────────────────── */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.62rem;
+  font-family: var(--sans);
+  font-size: 0.71rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  border: 1px solid;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+  margin: 0.1rem 0.15rem 0.1rem 0;
+  line-height: 1.4;
+}
+
+.checkin-btn {
+  border-color: #2471A3;
+  color: #2471A3;
+  background: transparent;
+}
+.checkin-btn:hover { background: #E8F0F8; }
+
+.checkout-btn {
+  border-color: #1A5832;
+  color: #1A5832;
+  background: transparent;
+}
+.checkout-btn:hover { background: #EAF4EE; }
+
+.cancel-bk-btn {
+  border-color: #8B1A10;
+  color: #8B1A10;
+  background: transparent;
+}
+.cancel-bk-btn:hover { background: #FCECEA; }
+
+/* ── EMPTY STATES & NOTES ───────────────────────────────────── */
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.endpoint-note {
+  padding: 0.75rem 1rem;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  border-left: 3px solid #E6A817;
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+.endpoint-note code {
+  font-family: 'Courier New', monospace;
+  background: rgba(0,0,0,0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+}
+
+/* ── NEW BOOKING FORM ───────────────────────────────────────── */
+.nb-form {
+  margin-top: 1.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--border-soft);
+}
+.nb-form.hidden { display: none; }
+
+/* ── RATE MANAGEMENT (4.2) ───────────────────────────────────── */
 .rate-form-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1.1rem;
 }
 
 .rate-select {
   width: 100%;
-  padding: 0.68rem 0.85rem;
+  padding: 0.6rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-family: var(--sans);
   font-size: 0.9rem;
   color: var(--ink);
   background: var(--white);
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B6158' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+  transition: border-color 0.14s;
 }
+.rate-select:focus { outline: none; border-color: var(--gold); }
+
+.rate-channels-section { margin-top: 1.2rem; }
+.rate-history-section  { margin-top: 2.2rem; }
 
 .rate-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.9rem;
-  margin-top: 0.75rem;
+  margin-top: 0.9rem;
 }
 
 .rate-card {
-  background: var(--ivory, #FAF8F5);
+  background: var(--ivory);
   border: 1px solid var(--border);
   border-top: 3px solid var(--gold);
   border-radius: var(--radius);
-  padding: 1rem 0.9rem;
+  padding: 1.1rem 1rem 0.9rem;
   text-align: center;
 }
 
 .rate-card .rc-channel {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--forest);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .rate-card .rc-mult {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--muted);
-  margin-top: 0.2rem;
+  margin-top: 0.22rem;
 }
 
 .rate-card .rc-price {
   font-family: var(--serif);
-  font-size: 1.55rem;
+  font-size: 1.5rem;
   font-weight: 400;
   color: var(--forest);
-  margin-top: 0.45rem;
+  margin-top: 0.5rem;
+  line-height: 1;
 }
 
-@media (max-width: 700px) {
-  .rate-form-grid {
-    grid-template-columns: 1fr;
-  }
-  .rate-cards-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* Refresh button (reuse action-btn style) */
+#refresh-history-btn {
+  border-color: var(--gold-dim);
+  color: var(--gold-dim);
+  background: transparent;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.76rem;
+}
+#refresh-history-btn:hover { background: var(--gold-pale); }
+
+.rate-history-section > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+/* ── MISC INPUT OVERRIDE (number type) ─────────────────────── */
+input[type="number"] {
+  width: 100%;
+  padding: 0.58rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--white);
+  transition: border-color 0.14s;
+  appearance: textfield;
+}
+input[type="number"]:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2.5px rgba(201,169,75,0.16);
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
+
+input[type="email"], input[type="tel"] {
+  width: 100%;
+  padding: 0.58rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--white);
+  transition: border-color 0.14s;
+}
+input[type="email"]:focus, input[type="tel"]:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2.5px rgba(201,169,75,0.16);
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .stats-row        { grid-template-columns: repeat(2, 1fr); }
+  .rate-cards-grid  { grid-template-columns: repeat(2, 1fr); }
+  .rate-form-grid   { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 540px) {
+  .stats-row     { gap: 0.6rem; }
+  .stat-num      { font-size: 2.2rem; }
+  .tab-btn       { font-size: 0.76rem; padding: 0.6rem 0.85rem; }
+  .pin-card      { padding: 2rem 1.6rem 1.8rem; }
+  .pin-logo      { font-size: 1.9rem; }
+
+  .header-actions { top: 0.7rem; right: 0.8rem; gap: 0.4rem; }
+  .logout-btn     { font-size: 0.62rem; padding: 0.22rem 0.6rem; }
+
+  .search-row input[id="search-name"],
+  .search-row input[type="date"],
+  .search-row select { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pin-card.shake { animation: none; }
 }

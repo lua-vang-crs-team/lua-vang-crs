@@ -16,16 +16,19 @@
   <div id="pin-overlay" class="pin-overlay">
     <div class="pin-card" id="pin-card">
       <div class="pin-logo">Lụa Vàng</div>
+      <div class="pin-divider"></div>
       <div class="pin-sub" data-i18n="pin-sub">Cổng nhân viên</div>
       <div class="pin-field">
-        <input type="password" id="pin-input"
+        <input type="password"
+               id="pin-input"
                placeholder="••••"
                maxlength="8"
                autocomplete="off"
-               data-i18n-placeholder="pin-placeholder">
+               autofocus>
       </div>
       <button class="btn pin-btn" id="pin-btn" data-i18n="pin-btn">Đăng nhập</button>
       <div id="pin-msg" class="msg hidden"></div>
+      <div class="pin-hint">Mã PIN nội bộ — không chia sẻ</div>
     </div>
   </div>
 
@@ -48,7 +51,7 @@
   <!-- ═══════════════════════ DASHBOARD ═════════════════════════ -->
   <main id="staff-main">
 
-    <!-- STATS ROW -->
+    <!-- ── STATS ROW ── -->
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-num" id="stat-arrivals">—</div>
@@ -68,19 +71,22 @@
       </div>
     </div>
 
-    <!-- TABS -->
+    <!-- ── TABS ── -->
     <div class="tabs">
-      <button class="tab-btn active" data-tab="bookings" data-i18n="tab-bookings">Quản lý booking</button>
-      <button class="tab-btn" data-tab="new-booking" data-i18n="tab-new-booking">Tạo booking mới</button>
-      <button class="tab-btn" data-tab="availability" data-i18n="tab-availability">Kiểm tra phòng</button>
-      <button class="tab-btn" data-tab="rates" data-i18n="tab-rates">Quản lý giá (4.2)</button>
+      <button class="tab-btn active" data-tab="bookings"     data-i18n="tab-bookings">Quản lý booking</button>
+      <button class="tab-btn"        data-tab="new-booking"  data-i18n="tab-new-booking">Tạo booking mới</button>
+      <button class="tab-btn"        data-tab="availability" data-i18n="tab-availability">Kiểm tra phòng</button>
+      <button class="tab-btn"        data-tab="rates"        data-i18n="tab-rates">Quản lý giá (4.2)</button>
     </div>
 
-    <!-- ──────────── TAB 1: BOOKING MANAGEMENT ──────────── -->
+    <!-- ═══════ TAB 1: BOOKING MANAGEMENT ═══════ -->
     <div class="tab-panel active" id="tab-bookings">
       <div class="step">
+        <div class="step-tag" data-i18n="tab-bookings">Quản lý booking</div>
+
         <div class="search-row">
-          <input type="text" id="search-name"
+          <input type="text"
+                 id="search-name"
                  placeholder="Tên khách / Mã booking…"
                  data-i18n-placeholder="ph-search">
           <input type="date" id="search-date-from">
@@ -101,7 +107,7 @@
       </div>
     </div>
 
-    <!-- ──────────── TAB 2: NEW BOOKING ──────────── -->
+    <!-- ═══════ TAB 2: NEW BOOKING ═══════ -->
     <div class="tab-panel" id="tab-new-booking">
       <div class="step">
         <div class="step-tag" data-i18n="new-bk-tag">Tạo booking thủ công</div>
@@ -132,26 +138,32 @@
                    placeholder="Chọn phòng từ danh sách"
                    data-i18n-placeholder="ph-room">
           </div>
-          <div class="field">
-            <label for="nb-guest-name" data-i18n="label-guest">Tên khách chính</label>
-            <input type="text" id="nb-guest-name"
-                   placeholder="Họ và tên đầy đủ (Ví dụ: John)"
-                   data-i18n-placeholder="ph-guest">
-          </div>
+
           <div class="date-row">
             <div class="field">
-              <label for="nb-guest-email">Email khách (4.3 Returning Guest)</label>
-              <input type="email" id="nb-guest-email" placeholder="john@email.com">
+              <label for="nb-guest-name" data-i18n="label-guest">Tên khách chính</label>
+              <input type="text" id="nb-guest-name"
+                     placeholder="Họ và tên đầy đủ"
+                     data-i18n-placeholder="ph-guest">
             </div>
             <div class="field">
-              <label for="nb-guest-phone">Số điện thoại</label>
-              <input type="tel" id="nb-guest-phone" placeholder="0901234567">
+              <label for="nb-guest-email">Email khách <span style="color:var(--gold-dim);font-weight:600">4.3</span></label>
+              <input type="email" id="nb-guest-email" placeholder="john@email.com">
             </div>
           </div>
-          <div class="field">
-            <label for="nb-extra-guests">Khách đi cùng (4.3 Multi-Guest, nhập: Tên, Email)</label>
-            <input type="text" id="nb-extra-guests" placeholder="Ví dụ: Anna, anna@email.com">
+
+          <div class="date-row">
+            <div class="field">
+              <label for="nb-guest-phone">Số điện thoại</label>
+              <input type="tel" id="nb-guest-phone" placeholder="0901 234 567">
+            </div>
+            <div class="field">
+              <label for="nb-extra-guests">Khách đi cùng <span style="color:var(--gold-dim);font-weight:600">4.3 Multi-Guest</span></label>
+              <input type="text" id="nb-extra-guests"
+                     placeholder="Tên, email — phân cách bởi dấu chấm phẩy">
+            </div>
           </div>
+
           <button class="btn btn-primary" id="nb-book-btn"
                   data-i18n="btn-book">Xác nhận đặt phòng</button>
           <div id="nb-book-status" class="msg hidden"></div>
@@ -160,7 +172,7 @@
       </div>
     </div>
 
-    <!-- ──────────── TAB 3: QUICK AVAILABILITY ──────────── -->
+    <!-- ═══════ TAB 3: QUICK AVAILABILITY ═══════ -->
     <div class="tab-panel" id="tab-availability">
       <div class="step">
         <div class="step-tag" data-i18n="avail-tag">Kiểm tra nhanh</div>
@@ -185,15 +197,15 @@
       </div>
     </div>
 
-    <!-- ──────────── TAB 4: STAFF RATE MANAGEMENT (4.2) ──────────── -->
+    <!-- ═══════ TAB 4: RATE MANAGEMENT (4.2) ═══════ -->
     <div class="tab-panel" id="tab-rates">
       <div class="step">
         <div class="step-tag" data-i18n="rate-tag">Quản trị doanh thu · 4.2 Rate Consistency</div>
         <h2 data-i18n="rate-h2">Staff Rate Management</h2>
 
         <div class="rate-form-grid">
-          <div class="field">
-            <label for="rate-room-type" data-i18n="label-room-type">Loại phòng (Room Type)</label>
+          <div class="field" style="margin-bottom:0">
+            <label for="rate-room-type" data-i18n="label-room-type">Loại phòng</label>
             <select id="rate-room-type" class="select-input rate-select">
               <option value="Deluxe">Deluxe</option>
               <option value="Superior">Superior</option>
@@ -204,54 +216,63 @@
             </select>
           </div>
 
-          <div class="field">
-            <label for="rate-base-input" data-i18n="label-base-rate">Giá cơ bản (Base Rate — VNĐ)</label>
-            <input type="number" id="rate-base-input" min="100000" step="50000" value="4000000" placeholder="Ví dụ: 4000000">
+          <div class="field" style="margin-bottom:0">
+            <label for="rate-base-input" data-i18n="label-base-rate">Base Rate (VNĐ)</label>
+            <input type="number" id="rate-base-input"
+                   min="100000" step="50000" value="4000000"
+                   placeholder="4000000">
           </div>
 
-          <div class="field">
-            <label for="rate-changed-by" data-i18n="label-changed-by">Người cập nhật (Changed By)</label>
-            <input type="text" id="rate-changed-by" value="staff_admin" placeholder="Tên nhân viên">
+          <div class="field" style="margin-bottom:0">
+            <label for="rate-changed-by" data-i18n="label-changed-by">Người cập nhật</label>
+            <input type="text" id="rate-changed-by"
+                   value="staff_admin"
+                   placeholder="Tên nhân viên">
           </div>
         </div>
 
-        <button class="btn btn-primary" id="update-rate-btn" data-i18n="btn-update-rate">Update Rate</button>
+        <button class="btn btn-primary" id="update-rate-btn"
+                data-i18n="btn-update-rate">Update Rate</button>
         <div id="rate-status" class="msg hidden"></div>
 
-        <!-- KẾT QUẢ GIÁ THEO KÊNH (Direct, OTA1, OTA2, GDS) -->
+        <!-- Channel rate cards -->
         <div class="rate-channels-section">
-          <div class="step-tag" style="margin-top:1.6rem" data-i18n="rate-preview-tag">Bảng giá phân phối tự động theo kênh</div>
+          <div class="step-tag" style="margin-top:1.8rem;margin-bottom:0"
+               data-i18n="rate-preview-tag">Bảng giá phân phối tự động theo kênh</div>
           <div class="rate-cards-grid" id="rate-cards-grid">
             <div class="rate-card">
               <div class="rc-channel">Direct Website</div>
-              <div class="rc-mult">× 0.95 (-5%)</div>
+              <div class="rc-mult">× 0.95 &nbsp;(−5%)</div>
               <div class="rc-price" id="price-direct">3.800.000 ₫</div>
             </div>
             <div class="rate-card">
-              <div class="rc-channel">OTA 1 (VietStay)</div>
-              <div class="rc-mult">× 1.05 (+5%)</div>
+              <div class="rc-channel">OTA 1 · VietStay</div>
+              <div class="rc-mult">× 1.05 &nbsp;(+5%)</div>
               <div class="rc-price" id="price-ota1">4.200.000 ₫</div>
             </div>
             <div class="rate-card">
-              <div class="rc-channel">OTA 2 (StayAsia)</div>
-              <div class="rc-mult">× 1.05 (+5%)</div>
+              <div class="rc-channel">OTA 2 · StayAsia</div>
+              <div class="rc-mult">× 1.05 &nbsp;(+5%)</div>
               <div class="rc-price" id="price-ota2">4.200.000 ₫</div>
             </div>
             <div class="rate-card">
               <div class="rc-channel">GDS</div>
-              <div class="rc-mult">× 1.00 (Chuẩn)</div>
+              <div class="rc-mult">× 1.00 &nbsp;(chuẩn)</div>
               <div class="rc-price" id="price-gds">4.000.000 ₫</div>
             </div>
           </div>
         </div>
 
-        <!-- BẢNG LỊCH SỬ THAY ĐỔI GIÁ (RateHistory) -->
-        <div class="rate-history-section" style="margin-top:2rem">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
-            <div class="step-tag" style="margin:0" data-i18n="rate-history-tag">Lịch sử thay đổi giá (RateHistory)</div>
-            <button class="action-btn checkin-btn" id="refresh-history-btn" type="button">Làm mới lịch sử</button>
+        <!-- Rate history -->
+        <div class="rate-history-section">
+          <div>
+            <div class="step-tag" style="margin:0"
+                 data-i18n="rate-history-tag">Lịch sử thay đổi giá (RateHistory)</div>
+            <button class="action-btn" id="refresh-history-btn" type="button">↻ Làm mới</button>
           </div>
-          <div id="rate-history-container"></div>
+          <div id="rate-history-container">
+            <div class="no-results">Nhấn «Update Rate» để xem lịch sử.</div>
+          </div>
         </div>
 
       </div>
