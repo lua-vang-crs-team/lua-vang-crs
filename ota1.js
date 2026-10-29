@@ -51,6 +51,7 @@ const I18N = {
     'msg-cancelling':  'Đang xử lý yêu cầu hủy…',
     'msg-404':         'Không tìm thấy mã đặt phòng. Vui lòng kiểm tra lại.',
     'msg-400':         'Mã đặt phòng này không thể hủy hoặc đã được hủy trước đó.',
+    'msg-wrong-channel':'Mã đặt phòng này thuộc kênh khác (không phải đặt qua VietStay). Quý khách vui lòng truy cập đúng kênh đã đặt để hủy!',
     'msg-cancel-err':  'Không thể hủy lúc này. Vui lòng liên hệ bộ phận hỗ trợ.',
     'inv-not-synced':  'Đang kết nối lại…',
     'msg-found-rooms': (n) => `Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
@@ -98,6 +99,7 @@ const I18N = {
     'msg-cancelling':  'Processing cancellation…',
     'msg-404':         'Booking ID not found. Please double-check.',
     'msg-400':         'This booking cannot be cancelled or is already cancelled.',
+    'msg-wrong-channel':'This reservation was booked via another channel. Please cancel via the original booking channel!',
     'msg-cancel-err':  'Unable to cancel. Please contact guest support.',
     'inv-not-synced':  'Reconnecting…',
     'msg-found-rooms': (n) => `Found <strong>${n}</strong> available room${n!==1?'s':''}.`,
@@ -193,14 +195,13 @@ function rateStr(low,high) {
   applyLanguage(saved);
 })();
 
-// ── INVENTORY (Khắc phục lỗi lặp khối) ───────────────────────
+// ── INVENTORY ─────────────────────────────────────────────────
 async function loadInventory() {
   try {
     const rows = await restGet('channel_inventory',
       `?channel=eq.${SOURCE_CHANNEL}&select=room_type,available_count,updated_at&order=updated_at.desc`);
     if (!rows?.length) return;
     
-    // Sử dụng Set để loại bỏ triệt để việc render lặp nhiều khối cùng hạng phòng
     const seen = new Set();
     const grid = document.getElementById('inv-grid');
     grid.innerHTML = '';
@@ -279,7 +280,7 @@ function pickRoom(room,listEl){
   document.getElementById('book-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── BOOK (Đồng bộ thông tin liên hệ chuẩn) ───────────────────
+// ── BOOK ──────────────────────────────────────────────────────
 document.getElementById('book-btn')?.addEventListener('click', async ()=>{
   const roomId     = (document.getElementById('selected-room').value || '').trim();
   const guestName  = (document.getElementById('guest-name').value    || '').trim();
@@ -303,6 +304,7 @@ document.getElementById('book-btn')?.addEventListener('click', async ()=>{
       check_in:       searchDates.check_in,
       check_out:      searchDates.check_out,
       source_channel: SOURCE_CHANNEL,
+      channel:        SOURCE_CHANNEL,
       guest_name:     guestName,
       email:          guestEmail || null,
       phone:          guestPhone || null,
@@ -352,22 +354,58 @@ function renderBookingPanel(bookingId,roomId,guestName,checkIn,checkOut){
   });
 }
 
-// ── CANCEL ────────────────────────────────────────────────────
+// ── CANCEL (Kiểm tra đúng kênh VietStay trước khi hủy) ────────
 document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
-  const bookingId=(document.getElementById('booking-id-input').value||'').trim();
-  if(!bookingId){showMsg('cancel-status','warning',t('msg-no-bid'));return;}
-  if(!window.confirm(t('confirm-cancel',bookingId)))return;
-  setBusy('cancel-btn',true);showMsg('cancel-status','loading',t('msg-cancelling'));
-  try{
-    const{ok,status,data}=await callFn('cancel_booking',{booking_id:bookingId,source_channel:SOURCE_CHANNEL});
-    if(status===404){showMsg('cancel-status','error',t('msg-404'));return;}
-    if(status===400){showMsg('cancel-status','warning',data.error||t('msg-400'));return;}
-    if(!ok){showMsg('cancel-status','error',data.error||t('msg-cancel-err'));return;}
-    showMsg('cancel-status','success',t('msg-cancel-ok',bookingId));
-    document.getElementById('booking-id-input').value='';
+  const bookingId = (document.getElementById('booking-id-input').value || '').trim();
+  if(!bookingId){ showMsg('cancel-status','warning',t('msg-no-bid')); return; }
+  
+  setBusy('cancel-btn', true);
+  showMsg('cancel-status', 'loading', t('msg-cancelling'));
+
+  try {
+    // 1. KIỂM TRA ĐƠN ĐẶT PHÒNG CÓ THUỘC KÊNH OTA_1 KHÔNG
+    const bookings = await restGet('booking', `?booking_id=eq.${encodeURIComponent(bookingId)}&select=*`);
+    if (!bookings || bookings.length === 0) {
+      showMsg('cancel-status', 'error', t('msg-404'));
+      return;
+    }
+
+    const b = bookings[0];
+    let originalChannel = '';
+    for (const [key, val] of Object.entries(b)) {
+      if (/channel|source/i.test(key) && val) {
+        originalChannel = String(val).toLowerCase().trim();
+        break;
+      }
+    }
+
+    // Nếu đơn thuộc kênh khác (ota_2 hoặc direct) -> Chặn ngay lập tức
+    if (originalChannel && originalChannel !== SOURCE_CHANNEL && originalChannel !== 'vietstay') {
+      showMsg('cancel-status', 'error', t('msg-wrong-channel'));
+      return;
+    }
+
+    // 2. XÁC NHẬN VÀ TIẾN HÀNH HỦY
+    if(!window.confirm(t('confirm-cancel', bookingId))) return;
+
+    const {ok, status, data} = await callFn('cancel_booking', {
+      booking_id: bookingId,
+      source_channel: SOURCE_CHANNEL,
+      channel: SOURCE_CHANNEL
+    });
+
+    if(status === 404) { showMsg('cancel-status','error',t('msg-404')); return; }
+    if(status === 400) { showMsg('cancel-status','warning',data.error || t('msg-400')); return; }
+    if(!ok)            { showMsg('cancel-status','error',data.error || t('msg-cancel-err')); return; }
+
+    showMsg('cancel-status','success',t('msg-cancel-ok', bookingId));
+    document.getElementById('booking-id-input').value = '';
     loadInventory();
-  }catch(err){showMsg('cancel-status','error',t('msg-connect-err',err.message));}
-  finally{setBusy('cancel-btn',false);}
+  } catch(err) {
+    showMsg('cancel-status','error',t('msg-connect-err',err.message));
+  } finally {
+    setBusy('cancel-btn', false);
+  }
 });
 
 // ── INIT & AUTO REFRESH ───────────────────────────────────────
