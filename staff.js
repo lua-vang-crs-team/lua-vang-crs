@@ -1,7 +1,7 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Cập nhật: Đọc trực tiếp source_channel từ DB
+   Fix: Data Binding load trực tiếp từ v_channel_rates
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -258,7 +258,6 @@ function getStatusBadge(status) {
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
 
-// Render nhãn kênh trực tiếp từ source_channel trong database
 function getChannelBadge(sourceChannel) {
   const ch = String(sourceChannel || '').toLowerCase().trim();
   if (ch === 'ota_1' || ch.includes('vietstay')) {
@@ -384,7 +383,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING (ĐỌC TRỰC TIẾP SOURCE_CHANNEL TỪ DB) ─
+// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -410,7 +409,6 @@ async function searchBookings() {
                      || b.guest_id 
                      || 'Khách lưu trú';
 
-      // Đọc trực tiếp trường source_channel từ DB
       const ch = b.source_channel || b.channel || 'direct';
 
       return {
@@ -493,7 +491,6 @@ function renderBookingsTable(rows) {
     if (!window.confirm(t('confirm-cancel', id))) return;
     btn.disabled = true; btn.textContent = '…';
     try {
-      // Staff Portal gửi kèm source_channel khớp với booking để hủy hợp lệ
       const { ok, data } = await callFn('cancel_booking', { booking_id: id, source_channel: ch });
       if (ok) {
         showMsg('search-bookings-status', 'success', t('msg-cancel-ok', id));
@@ -646,7 +643,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ ───────────────────────────────────
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (CHÍNH XÁC THEO V_CHANNEL_RATES) ───
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -685,7 +682,7 @@ async function loadCurrentRates(roomType) {
   if (!roomType) return;
 
   const inp = document.getElementById('rate-base-input');
-  if (inp) inp.placeholder = 'Đang tải giá...';
+  if (inp) inp.placeholder = 'Đang tải giá…';
 
   try {
     let baseRate = null;
@@ -696,44 +693,55 @@ async function loadCurrentRates(roomType) {
       gds:    'price-gds'
     };
 
-    // 1. Lấy trực tiếp từ view v_channel_rates
+    // 1. QUERY TRỰC TIẾP TỪ v_channel_rates (hỗ trợ ilike để match chính xác)
+    let rows = [];
     try {
-      const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType)}`);
-      if (rows && rows.length > 0) {
-        rows.forEach(r => {
-          const chKey = String(r.channel || r.source_channel || r.channel_name || '').toLowerCase().trim();
-          const elId = channelMap[chKey];
-          const channelPrice = Number(r.computed_rate ?? r.rate ?? r.channel_rate ?? 0);
-          if (elId && channelPrice > 0) {
-            const el = document.getElementById(elId);
-            if (el) el.textContent = vndFmt(channelPrice);
-          }
-          if (!baseRate && r.base_rate) {
-            baseRate = Number(r.base_rate);
-          }
-        });
-
-        if (baseRate && inp) {
-          inp.value = baseRate;
-          currentBaseRate = baseRate;
-          inp.placeholder = '4000000';
-          return;
-        }
+      rows = await restGet('v_channel_rates', `?room_type=ilike.${encodeURIComponent(roomType.trim())}`);
+      if (!rows || rows.length === 0) {
+        // Thử lại nếu DB lưu không phân biệt hoa thường
+        rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
       }
-    } catch (vErr) {
-      console.warn("Chưa truy vấn được v_channel_rates, chuyển sang tính từ rate_rule:", vErr.message);
+    } catch (e1) {
+      console.warn("Lỗi đọc v_channel_rates:", e1.message);
     }
 
-    // 2. Fallback tính từ rate_rule và base_rate thực tế
+    if (rows && rows.length > 0) {
+      rows.forEach(r => {
+        // Nhận diện mã kênh: channel_code, channel, source_channel
+        const code = String(r.channel_code || r.channel || r.source_channel || '').toLowerCase().trim();
+        const elId = channelMap[code];
+
+        // Nhận diện giá: channel_rate, computed_rate, rate
+        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+        if (elId && price > 0) {
+          const el = document.getElementById(elId);
+          if (el) el.textContent = vndFmt(price);
+        }
+
+        // Lấy base_rate
+        if (!baseRate && r.base_rate) {
+          baseRate = Number(r.base_rate);
+        }
+      });
+
+      if (baseRate && inp) {
+        inp.value = baseRate;
+        currentBaseRate = baseRate;
+        inp.placeholder = '4000000';
+        return; // Đã load thành công từ v_channel_rates
+      }
+    }
+
+    // 2. Fallback nếu view rỗng hoặc chưa map
     const [rulesRes, roomsRes] = await Promise.allSettled([
-      restGet('rate_rule', `?room_type=eq.${encodeURIComponent(roomType)}&select=*`),
-      restGet('room', `?room_type=eq.${encodeURIComponent(roomType)}&select=rate_low&limit=1`)
+      restGet('rate_rule', `?room_type=ilike.${encodeURIComponent(roomType.trim())}&select=*`),
+      restGet('room', `?room_type=ilike.${encodeURIComponent(roomType.trim())}&select=rate_low&limit=1`)
     ]);
 
     const roomsData = roomsRes.status === 'fulfilled' ? roomsRes.value : [];
     const rulesData = rulesRes.status === 'fulfilled' ? rulesRes.value : [];
 
-    baseRate = Number(roomsData?.[0]?.rate_low) || null;
+    baseRate = Number(roomsData?.[0]?.rate_low) || 4800000;
 
     if (baseRate && inp) {
       inp.value = baseRate;
@@ -742,8 +750,8 @@ async function loadCurrentRates(roomType) {
 
       if (rulesData && rulesData.length > 0) {
         rulesData.forEach(r => {
-          const chKey = String(r.channel || r.source_channel || '').toLowerCase().trim();
-          const elId = channelMap[chKey];
+          const code = String(r.channel_code || r.channel || r.source_channel || '').toLowerCase().trim();
+          const elId = channelMap[code];
           const mult = Number(r.multiplier || 1.0);
           if (elId) {
             document.getElementById(elId).textContent = vndFmt(Math.round(baseRate * mult));
@@ -755,8 +763,6 @@ async function loadCurrentRates(roomType) {
         document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
         document.getElementById('price-gds').textContent    = vndFmt(baseRate);
       }
-    } else {
-      if (inp) inp.placeholder = 'Chưa có giá cơ sở';
     }
 
   } catch (err) {
@@ -765,6 +771,7 @@ async function loadCurrentRates(roomType) {
   }
 }
 
+// Bắt sự kiện dropdown: chọn room_type là tải ngay dữ liệu thực tế
 document.getElementById('rate-room-type')?.addEventListener('change', async function() {
   const rt = this.value;
   currentRoomTypeRate = rt || null;
@@ -793,7 +800,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     return; 
   }
 
-  // Chặn ghi log trùng
+  // Chặn ghi log thừa khi giá mới = giá hiện tại
   if (currentBaseRate !== null && newBaseRate === currentBaseRate) {
     showMsg('rate-status', 'warning', t('msg-same-rate'));
     return;
@@ -817,6 +824,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
     currentBaseRate = newBaseRate;
 
+    // Load lại trực tiếp từ DB ngay sau khi cập nhật
     await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
