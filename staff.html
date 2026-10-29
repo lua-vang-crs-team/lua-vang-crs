@@ -28,8 +28,8 @@
       </div>
       <button class="btn pin-btn" id="pin-btn" data-i18n="pin-btn">Đăng nhập</button>
       <div id="pin-msg" class="msg hidden"></div>
-      <!-- Mục 6: Wording demo access code chuẩn học thuật -->
-      <div class="pin-hint">Demo access code: <strong>2026</strong> – For academic demonstration only</div>
+      <!-- Box gợi ý mã PIN song ngữ -->
+      <div class="pin-hint" data-i18n-html="pin-hint">Demo access code: <strong>2026</strong> – For academic demonstration only</div>
     </div>
   </div>
 
@@ -147,20 +147,21 @@
                      data-i18n-placeholder="ph-guest">
             </div>
             <div class="field">
-              <label for="nb-guest-email">Địa chỉ Email</label>
+              <label for="nb-guest-email" data-i18n="label-email">Địa chỉ Email</label>
               <input type="email" id="nb-guest-email" placeholder="guest@domain.com">
             </div>
           </div>
 
           <div class="date-row">
             <div class="field">
-              <label for="nb-guest-phone">Số điện thoại liên hệ</label>
+              <label for="nb-guest-phone" data-i18n="label-phone">Số điện thoại liên hệ</label>
               <input type="tel" id="nb-guest-phone" placeholder="0901 234 567">
             </div>
             <div class="field">
-              <label for="nb-extra-guests">Khách đi cùng phòng (nếu có)</label>
+              <label for="nb-extra-guests" data-i18n="label-extra">Khách đi cùng phòng (nếu có)</label>
               <input type="text" id="nb-extra-guests"
-                     placeholder="Tên, email — phân cách bởi dấu chấm phẩy">
+                     placeholder="Tên, email — phân cách bởi dấu chấm phẩy"
+                     data-i18n-placeholder="ph-extra">
             </div>
           </div>
 
@@ -207,7 +208,7 @@
           <div class="field" style="margin-bottom:0">
             <label for="rate-room-type" data-i18n="label-room-type">Hạng phòng áp dụng</label>
             <select id="rate-room-type" class="select-input rate-select">
-              <option value="">Đang tải danh mục phòng…</option>
+              <option value="" data-i18n="loading-types">Đang tải danh mục phòng…</option>
             </select>
           </div>
 
@@ -215,14 +216,15 @@
             <label for="rate-base-input" data-i18n="label-base-rate">Giá cơ bản / đêm (VNĐ)</label>
             <input type="number" id="rate-base-input"
                    min="100000" step="50000"
-                   placeholder="Chọn hạng phòng để tải giá...">
+                   placeholder="Chọn hạng phòng để tải giá..."
+                   data-i18n-placeholder="ph-base-rate">
           </div>
 
           <div class="field" style="margin-bottom:0">
             <label for="rate-changed-by" data-i18n="label-changed-by">Bộ phận thực hiện</label>
             <input type="text" id="rate-changed-by"
                    value="Revenue Manager"
-                   placeholder="Bộ phận cập nhật" readonly>
+                   placeholder="Revenue Manager" readonly>
           </div>
         </div>
 
@@ -230,29 +232,29 @@
                 data-i18n="btn-update-rate">Lưu thay đổi giá</button>
         <div id="rate-status" class="msg hidden"></div>
 
-        <!-- THẺ GIÁ PHÂN PHỐI THEO KÊNH -->
+        <!-- THẺ GIÁ PHÂN PHỐI THEO KÊNH (ĐÃ CÓ DATA-I18N HOÀN CHỈNH) -->
         <div class="rate-channels-section">
           <div class="step-tag" style="margin-top:1.8rem;margin-bottom:0"
                data-i18n="rate-preview-tag">Bảng giá phân phối tự động theo chính sách kênh</div>
           <div class="rate-cards-grid" id="rate-cards-grid">
             <div class="rate-card">
-              <div class="rc-channel">Kênh Direct (Website)</div>
-              <div class="rc-mult">Chiết khấu 5% (× 0.95)</div>
+              <div class="rc-channel" data-i18n="card-ch-direct">Kênh Direct (Website)</div>
+              <div class="rc-mult" data-i18n="card-sub-direct">Chiết khấu 5% (× 0.95)</div>
               <div class="rc-price" id="price-direct">—</div>
             </div>
             <div class="rate-card">
-              <div class="rc-channel">OTA 1 · VietStay</div>
-              <div class="rc-mult">Phí hoa hồng 5% (× 1.05)</div>
+              <div class="rc-channel" data-i18n="card-ch-ota1">OTA 1 · VietStay</div>
+              <div class="rc-mult" data-i18n="card-sub-ota1">Phí hoa hồng 5% (× 1.05)</div>
               <div class="rc-price" id="price-ota1">—</div>
             </div>
             <div class="rate-card">
-              <div class="rc-channel">OTA 2 · StayAsia</div>
-              <div class="rc-mult">Phí hoa hồng 5% (× 1.05)</div>
+              <div class="rc-channel" data-i18n="card-ch-ota2">OTA 2 · StayAsia</div>
+              <div class="rc-mult" data-i18n="card-sub-ota2">Phí hoa hồng 5% (× 1.05)</div>
               <div class="rc-price" id="price-ota2">—</div>
             </div>
             <div class="rate-card">
-              <div class="rc-channel">Kênh GDS / Đại lý</div>
-              <div class="rc-mult">Giá chuẩn (× 1.00)</div>
+              <div class="rc-channel" data-i18n="card-ch-gds">Kênh GDS / Đại lý</div>
+              <div class="rc-mult" data-i18n="card-sub-gds">Giá chuẩn (× 1.00)</div>
               <div class="rc-price" id="price-gds">—</div>
             </div>
           </div>
@@ -263,10 +265,10 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2rem">
             <div class="step-tag" style="margin:0"
                  data-i18n="rate-history-tag">Lịch sử điều chỉnh biểu giá</div>
-            <button class="action-btn" id="refresh-history-btn" type="button">↻ Làm mới</button>
+            <button class="action-btn" id="refresh-history-btn" type="button" data-i18n="btn-refresh">↻ Làm mới</button>
           </div>
           <div id="rate-history-container" style="margin-top:1rem">
-            <div class="no-results">Chọn hạng phòng để xem lịch sử điều chỉnh giá.</div>
+            <div class="no-results" data-i18n="select-type-first">Chọn hạng phòng để xem lịch sử điều chỉnh giá.</div>
           </div>
         </div>
 
@@ -279,6 +281,6 @@
     <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa · Hệ thống quản lý phòng &amp; vận hành tập trung · 2026</p>
   </footer>
 
-  <script src="staff.js?v=2026_fixed"></script>
+  <script src="staff.js?v=2026_fixed2"></script>
 </body>
 </html>
