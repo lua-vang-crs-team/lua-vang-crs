@@ -179,7 +179,6 @@ const I18N = {
   },
 };
 
-// ── STATE ──────────────────────────────────────────────────────
 let currentLang          = 'vi';
 let currentRoomTypeRate  = null;
 let nbSearchDates        = {};
@@ -308,7 +307,7 @@ function initPin() {
     }
   } catch {}
 
-  // Nếu chưa đăng nhập, đảm bảo hiện overlay
+  // Chưa đăng nhập: Hiện overlay
   if (overlay) overlay.classList.remove('hidden');
 
   function attempt() {
@@ -327,7 +326,7 @@ function initPin() {
   document.getElementById('pin-btn')?.addEventListener('click', attempt);
   input?.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
 
-  // Nút đăng xuất xóa session và hiện lại màn hình PIN
+  // Nút đăng xuất xóa session và khóa màn hình ngay
   document.getElementById('logout-btn')?.addEventListener('click', () => {
     try { sessionStorage.removeItem('staff_auth'); } catch {}
     if (overlay) overlay.classList.remove('hidden');
@@ -374,7 +373,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING (Khắc phục dứt điểm lỗi REST 400) ────
+// ── TAB 1: QUẢN LÝ BOOKING (KHẮC PHỤC TRIỆT ĐỂ LỖI REST 400) ───
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -391,48 +390,46 @@ async function searchBookings() {
 
   let rows = [];
 
-  // MỨC 1: Thử lấy đủ thông tin bao gồm cột guest_name và channel
+  // DÙNG SELECT=* ĐỂ KHÔNG BAO GIỜ BỊ LỖI CỘT KHÔNG TỒN TẠI (REST 400)
   try {
-    const raw = await restGet('booking', `?select=booking_id,room_id,guest_name,check_in,check_out,status,channel&order=check_in.desc&limit=100${filterQuery}`);
-    rows = raw.map(b => ({ ...b, source_channel: b.channel || 'direct' }));
-  } catch (e1) {
-    // MỨC 2: Thử lấy với cột guest_name (không có channel)
-    try {
-      const raw = await restGet('booking', `?select=booking_id,room_id,guest_name,check_in,check_out,status&order=check_in.desc&limit=100${filterQuery}`);
-      rows = raw.map(b => ({ ...b, source_channel: 'direct' }));
-    } catch (e2) {
-      // MỨC 3: Thử join bảng guest
-      try {
-        const raw = await restGet('booking', `?select=booking_id,room_id,check_in,check_out,status,guest(guest_name)&order=check_in.desc&limit=100${filterQuery}`);
-        rows = raw.map(b => ({
-          ...b,
-          guest_name: b.guest?.guest_name || 'Khách lưu trú',
-          source_channel: 'direct'
-        }));
-      } catch (e3) {
-        // MỨC 4: Fallback chỉ lấy các cột chắc chắn có, không bao giờ bị REST 400
-        try {
-          const raw = await restGet('booking', `?select=booking_id,room_id,check_in,check_out,status&order=check_in.desc&limit=100${filterQuery}`);
-          rows = raw.map(b => ({
-            ...b,
-            guest_name: 'Khách lưu trú',
-            source_channel: 'direct'
-          }));
-        } catch (errFinal) {
-          showMsg('search-bookings-status', 'error', t('msg-connect-err', errFinal.message));
-          return;
-        }
-      }
-    }
+    const raw = await restGet('booking', `?select=*&order=check_in.desc&limit=100${filterQuery}`);
+    
+    rows = (raw || []).map(b => {
+      // Tự động nhận diện tên khách từ mọi kiểu cấu trúc database
+      const guestName = b.guest_name 
+                     || b.guest?.guest_name 
+                     || b.guest_id 
+                     || 'Khách lưu trú';
+      
+      // Tự động nhận diện kênh đặt
+      const channel = b.source_channel 
+                   || b.channel 
+                   || b.source 
+                   || 'direct';
+
+      return {
+        booking_id:     b.booking_id || b.id || '—',
+        room_id:        b.room_id || '—',
+        guest_name:     guestName,
+        check_in:       b.check_in || '—',
+        check_out:      b.check_out || '—',
+        status:         b.status || 'confirmed',
+        source_channel: channel
+      };
+    });
+
+  } catch (err) {
+    showMsg('search-bookings-status', 'error', t('msg-connect-err', err.message));
+    return;
   }
 
-  // Lọc theo từ khóa tìm kiếm (Tên khách hoặc Mã booking hoặc Phòng)
+  // Lọc theo từ khóa tìm kiếm phía client
   if (name) {
     const q = name.toLowerCase();
     rows = rows.filter(b =>
-      (b.guest_name || '').toLowerCase().includes(q) ||
-      (b.booking_id || '').toLowerCase().includes(q) ||
-      (b.room_id    || '').toLowerCase().includes(q)
+      String(b.guest_name || '').toLowerCase().includes(q) ||
+      String(b.booking_id || '').toLowerCase().includes(q) ||
+      String(b.room_id    || '').toLowerCase().includes(q)
     );
   }
 
@@ -470,10 +467,10 @@ function renderBookingsTable(rows) {
     tr.innerHTML = `
       <td class="col-id">${b.booking_id}</td>
       <td><strong>${b.room_id}</strong></td>
-      <td>${b.guest_name || 'Khách lưu trú'}</td>
+      <td>${b.guest_name}</td>
       <td>${b.check_in}</td>
       <td>${b.check_out}</td>
-      <td style="font-size:0.74rem;color:var(--muted)">${b.source_channel || 'direct'}</td>
+      <td style="font-size:0.74rem;color:var(--muted)">${b.source_channel}</td>
       <td>${getStatusBadge(b.status)}</td>
       <td>${b.status === 'confirmed'
         ? `<button class="action-btn cancel-bk-btn" data-id="${b.booking_id}">Hủy</button>`
