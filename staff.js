@@ -9,7 +9,7 @@ const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
 const STAFF_PIN    = "2026";
 
-// Danh mục 6 hạng phòng chuẩn của Resort Lụa Vàng
+// Danh mục 6 hạng phòng chuẩn
 const DEFAULT_ROOM_TYPES = [
   "Deluxe Ocean View",
   "Deluxe Garden View",
@@ -185,7 +185,7 @@ let currentRoomTypeRate  = null;
 let nbSearchDates        = {};
 let nbSelectedRoom       = null;
 
-// ── TRANSLATE ──────────────────────────────────────────────────
+// ── TRANSLATE & FORMAT ─────────────────────────────────────────
 function t(key, ...args) {
   const tbl = I18N[currentLang] || I18N.vi;
   const e   = (key in tbl) ? tbl[key] : (key in I18N.vi ? I18N.vi[key] : key);
@@ -286,19 +286,30 @@ function initLang() {
   applyLanguage(saved);
 }
 
-// ── PIN AUTH ───────────────────────────────────────────────────
+// ── PIN AUTHENTICATION ─────────────────────────────────────────
 function showApp() {
-  document.getElementById('pin-overlay')?.classList.add('hidden');
+  const overlay = document.getElementById('pin-overlay');
+  if (overlay) overlay.classList.add('hidden');
   loadDashboardStats();
   loadRoomTypes();
   searchBookings();
 }
 
 function initPin() {
-  try { if (sessionStorage.getItem('staff_auth') === STAFF_PIN) { showApp(); return; } } catch {}
+  const overlay = document.getElementById('pin-overlay');
+  const input   = document.getElementById('pin-input');
+  const card    = document.getElementById('pin-card');
 
-  const input = document.getElementById('pin-input');
-  const card  = document.getElementById('pin-card');
+  // Kiểm tra phiên đăng nhập đã có hay chưa
+  try {
+    if (sessionStorage.getItem('staff_auth') === STAFF_PIN) {
+      showApp();
+      return;
+    }
+  } catch {}
+
+  // Nếu chưa đăng nhập, đảm bảo hiện overlay
+  if (overlay) overlay.classList.remove('hidden');
 
   function attempt() {
     if ((input?.value || '').trim() === STAFF_PIN) {
@@ -315,9 +326,13 @@ function initPin() {
 
   document.getElementById('pin-btn')?.addEventListener('click', attempt);
   input?.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+
+  // Nút đăng xuất xóa session và hiện lại màn hình PIN
   document.getElementById('logout-btn')?.addEventListener('click', () => {
     try { sessionStorage.removeItem('staff_auth'); } catch {}
-    location.reload();
+    if (overlay) overlay.classList.remove('hidden');
+    if (input) { input.value = ''; input.focus(); }
+    hideMsg('pin-msg');
   });
 }
 
@@ -334,11 +349,10 @@ function initTabs() {
   });
 }
 
-// ── DASHBOARD STATS (Khắc phục hoàn toàn lỗi chết chùm) ─────────
+// ── DASHBOARD STATS ─────────────────────────────────────────────
 async function loadDashboardStats() {
   const today = new Date().toISOString().split('T')[0];
 
-  // Sử dụng Promise.allSettled để 1 bảng lỗi không làm sập các thống kê khác
   const results = await Promise.allSettled([
     restGet('booking', `?check_in=eq.${today}&status=eq.confirmed&select=booking_id`),
     restGet('booking', `?check_out=eq.${today}&status=in.(confirmed,checked_in)&select=booking_id`),
@@ -352,7 +366,7 @@ async function loadDashboardStats() {
   const allRooms   = results[3].status === 'fulfilled' ? results[3].value : [];
 
   const occCount   = Array.isArray(occupied) ? occupied.length : 0;
-  const totalRooms = Array.isArray(allRooms) && allRooms.length > 0 ? allRooms.length : 180; // 180 phòng vật lý theo kiến trúc Lụa Vàng
+  const totalRooms = Array.isArray(allRooms) && allRooms.length > 0 ? allRooms.length : 180;
 
   document.getElementById('stat-arrivals').textContent   = Array.isArray(arrivals) ? arrivals.length : '0';
   document.getElementById('stat-departures').textContent = Array.isArray(departures) ? departures.length : '0';
@@ -360,7 +374,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: BOOKING MANAGEMENT (Khắc phục lỗi REST 400: booking) ─
+// ── TAB 1: QUẢN LÝ BOOKING (Khắc phục dứt điểm lỗi REST 400) ────
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -370,46 +384,49 @@ async function searchBookings() {
   showMsg('search-bookings-status', 'loading', t('msg-searching'));
   document.getElementById('bookings-table-container').innerHTML = '';
 
+  let filterQuery = '';
+  if (status)   filterQuery += `&status=eq.${status}`;
+  if (dateFrom) filterQuery += `&check_in=gte.${dateFrom}`;
+  if (dateTo)   filterQuery += `&check_out=lte.${dateTo}`;
+
   let rows = [];
 
-  // Thử nghiệm 1: Truy vấn có join guest
+  // MỨC 1: Thử lấy đủ thông tin bao gồm cột guest_name và channel
   try {
-    let params = '?select=booking_id,room_id,check_in,check_out,status,source_channel,guest(guest_name)'
-               + '&order=check_in.desc&limit=100';
-    if (status)   params += `&status=eq.${status}`;
-    if (dateFrom) params += `&check_in=gte.${dateFrom}`;
-    if (dateTo)   params += `&check_out=lte.${dateTo}`;
-
-    const raw = await restGet('booking', params);
-    rows = raw.map(b => ({
-      ...b,
-      guest_name: b.guest?.guest_name || b.guest_name || '—'
-    }));
-  } catch (err1) {
-    // Fallback 2: Nếu join guest lỗi hoặc schema cũ lưu guest_name thẳng vào booking
+    const raw = await restGet('booking', `?select=booking_id,room_id,guest_name,check_in,check_out,status,channel&order=check_in.desc&limit=100${filterQuery}`);
+    rows = raw.map(b => ({ ...b, source_channel: b.channel || 'direct' }));
+  } catch (e1) {
+    // MỨC 2: Thử lấy với cột guest_name (không có channel)
     try {
-      let params = '?select=booking_id,room_id,guest_name,check_in,check_out,status,source_channel'
-                 + '&order=check_in.desc&limit=100';
-      if (status)   params += `&status=eq.${status}`;
-      if (dateFrom) params += `&check_in=gte.${dateFrom}`;
-      if (dateTo)   params += `&check_out=lte.${dateTo}`;
-      rows = await restGet('booking', params);
-    } catch (err2) {
-      // Fallback 3: Chỉ lấy các cột cốt lõi không thể thiếu
+      const raw = await restGet('booking', `?select=booking_id,room_id,guest_name,check_in,check_out,status&order=check_in.desc&limit=100${filterQuery}`);
+      rows = raw.map(b => ({ ...b, source_channel: 'direct' }));
+    } catch (e2) {
+      // MỨC 3: Thử join bảng guest
       try {
-        let params = '?select=booking_id,room_id,check_in,check_out,status,source_channel'
-                   + '&order=check_in.desc&limit=100';
-        if (status)   params += `&status=eq.${status}`;
-        if (dateFrom) params += `&check_in=gte.${dateFrom}`;
-        if (dateTo)   params += `&check_out=lte.${dateTo}`;
-        rows = await restGet('booking', params);
-      } catch (err3) {
-        showMsg('search-bookings-status', 'error', t('msg-connect-err', err3.message));
-        return;
+        const raw = await restGet('booking', `?select=booking_id,room_id,check_in,check_out,status,guest(guest_name)&order=check_in.desc&limit=100${filterQuery}`);
+        rows = raw.map(b => ({
+          ...b,
+          guest_name: b.guest?.guest_name || 'Khách lưu trú',
+          source_channel: 'direct'
+        }));
+      } catch (e3) {
+        // MỨC 4: Fallback chỉ lấy các cột chắc chắn có, không bao giờ bị REST 400
+        try {
+          const raw = await restGet('booking', `?select=booking_id,room_id,check_in,check_out,status&order=check_in.desc&limit=100${filterQuery}`);
+          rows = raw.map(b => ({
+            ...b,
+            guest_name: 'Khách lưu trú',
+            source_channel: 'direct'
+          }));
+        } catch (errFinal) {
+          showMsg('search-bookings-status', 'error', t('msg-connect-err', errFinal.message));
+          return;
+        }
       }
     }
   }
 
+  // Lọc theo từ khóa tìm kiếm (Tên khách hoặc Mã booking hoặc Phòng)
   if (name) {
     const q = name.toLowerCase();
     rows = rows.filter(b =>
@@ -452,8 +469,8 @@ function renderBookingsTable(rows) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="col-id">${b.booking_id}</td>
-      <td>${b.room_id}</td>
-      <td>${b.guest_name || '—'}</td>
+      <td><strong>${b.room_id}</strong></td>
+      <td>${b.guest_name || 'Khách lưu trú'}</td>
       <td>${b.check_in}</td>
       <td>${b.check_out}</td>
       <td style="font-size:0.74rem;color:var(--muted)">${b.source_channel || 'direct'}</td>
@@ -490,7 +507,7 @@ function renderBookingsTable(rows) {
 
 document.getElementById('search-bookings-btn')?.addEventListener('click', searchBookings);
 
-// ── TAB 2: TẠO BOOKING MỚI ─────────────────────────────────────
+// ── TAB 2: TẠO ĐẶT PHÒNG THỦ CÔNG ──────────────────────────────
 (function() {
   const today = new Date().toISOString().split('T')[0];
   const ci = document.getElementById('nb-check-in');
@@ -587,7 +604,7 @@ document.getElementById('nb-book-btn')?.addEventListener('click', async () => {
   finally { setBusy('nb-book-btn', false); }
 });
 
-// ── TAB 3: TRA CỨU NHANH ───────────────────────────────────────
+// ── TAB 3: TRA CỨU NHANH PHÒNG TRỐNG ───────────────────────────
 (function() {
   const today = new Date().toISOString().split('T')[0];
   const ci = document.getElementById('av-check-in'), co = document.getElementById('av-check-out');
@@ -624,7 +641,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (Khắc phục lỗi REST 401) ───────────
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ ───────────────────────────────────
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -632,11 +649,9 @@ async function loadRoomTypes() {
   
   let types = [];
   try {
-    // Truy vấn bảng room (bỏ hẳn bảng room_types không có quyền để tránh lỗi REST 401)
     const rows = await restGet('room', '?select=room_type');
     types = [...new Set((rows || []).map(r => r.room_type))].filter(Boolean).sort();
   } catch (err) {
-    // Fallback sang danh mục chuẩn nếu bảng room bị RLS chặn
     types = DEFAULT_ROOM_TYPES;
   }
 
@@ -663,7 +678,6 @@ async function loadCurrentRates(roomType) {
     let baseRate = null;
     const channelMap = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
 
-    // Thử nghiệm 1: v_channel_rates view
     try {
       const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType)}`);
       if (rows?.length) {
@@ -681,7 +695,6 @@ async function loadCurrentRates(roomType) {
       }
     } catch {}
 
-    // Thử nghiệm 2: tính trực tiếp từ rate_rule và room.rate_low
     const [rules, rooms] = await Promise.allSettled([
       restGet('rate_rule', `?room_type=eq.${encodeURIComponent(roomType)}&select=channel,multiplier`),
       restGet('room', `?room_type=eq.${encodeURIComponent(roomType)}&select=rate_low&limit=1`)
@@ -700,7 +713,6 @@ async function loadCurrentRates(roomType) {
         if (elId) document.getElementById(elId).textContent = vndFmt(Math.round(baseRate * Number(r.multiplier)));
       });
     } else {
-      // Fallback theo đúng công thức chuẩn của hệ thống Lụa Vàng
       document.getElementById('price-direct').textContent = vndFmt(Math.round(baseRate * 0.95));
       document.getElementById('price-ota1').textContent   = vndFmt(Math.round(baseRate * 1.05));
       document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
@@ -739,7 +751,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     const { ok, data } = await callFn('update_base_rate', {
       room_type:     roomType,
       new_base_rate: newBaseRate,
-      changed_by:    null // Gửi null để khớp kiểu dữ liệu UUID|null trong Database
+      changed_by:    null
     });
 
     if (!ok) {
