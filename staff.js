@@ -1,6 +1,7 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
+   Phần 2: Chặn ghi log thừa trong Rate History
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -84,6 +85,7 @@ const I18N = {
     'msg-no-guest':      'Vui lòng nhập tên khách lưu trú.',
     'msg-no-type':       'Vui lòng chọn hạng phòng.',
     'msg-no-rate':       'Vui lòng nhập mức giá hợp lệ (≥ 100,000 ₫).',
+    'msg-same-rate':     'Mức giá mới trùng với giá hiện tại. Vui lòng nhập giá khác để cập nhật.',
     'msg-no-avail-rooms':'Hiện không có phòng trống cho khoảng thời gian này.',
     'msg-updating-rate': 'Đang đồng bộ biểu giá mới sang các kênh…',
     'msg-booking':       'Đang tiến hành tạo đơn đặt phòng…',
@@ -162,6 +164,7 @@ const I18N = {
     'msg-no-guest':      'Please enter guest name.',
     'msg-no-type':       'Please select a room category.',
     'msg-no-rate':       'Please enter a valid rate (≥ 100,000 VND).',
+    'msg-same-rate':     'New rate is identical to the current rate. Please enter a different rate.',
     'msg-no-avail-rooms':'No rooms available for the selected dates.',
     'msg-updating-rate': 'Synchronizing new rates across channels…',
     'msg-booking':       'Creating reservation…',
@@ -181,6 +184,7 @@ const I18N = {
 
 let currentLang          = 'vi';
 let currentRoomTypeRate  = null;
+let currentBaseRate      = null; // Lưu giá cơ sở hiện tại để chống ghi log trùng
 let nbSearchDates        = {};
 let nbSelectedRoom       = null;
 
@@ -644,7 +648,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (DATA BINDING CHUẨN V_CHANNEL_RATES) ───
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ ───────────────────────────────────
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -675,6 +679,7 @@ function resetRateCards() {
   });
   const inp = document.getElementById('rate-base-input');
   if (inp) inp.value = '';
+  currentBaseRate = null;
 }
 
 async function loadCurrentRates(roomType) {
@@ -693,7 +698,7 @@ async function loadCurrentRates(roomType) {
       gds:    'price-gds'
     };
 
-    // 1. Ưu tiên lấy trực tiếp từ view v_channel_rates
+    // 1. Lấy trực tiếp từ view v_channel_rates
     try {
       const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType)}`);
       if (rows && rows.length > 0) {
@@ -712,6 +717,7 @@ async function loadCurrentRates(roomType) {
 
         if (baseRate && inp) {
           inp.value = baseRate;
+          currentBaseRate = baseRate; // Lưu giá cơ sở hiện tại
           inp.placeholder = '4000000';
           return;
         }
@@ -733,6 +739,7 @@ async function loadCurrentRates(roomType) {
 
     if (baseRate && inp) {
       inp.value = baseRate;
+      currentBaseRate = baseRate; // Lưu giá cơ sở hiện tại
       inp.placeholder = '4000000';
 
       if (rulesData && rulesData.length > 0) {
@@ -775,12 +782,25 @@ document.getElementById('rate-room-type')?.addEventListener('change', async func
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
 });
 
+// Chặn update nếu giá mới bằng giá hiện tại
 document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
   const roomType    = (document.getElementById('rate-room-type')?.value || '').trim();
   const newBaseRate = Number(document.getElementById('rate-base-input')?.value);
 
-  if (!roomType) { showMsg('rate-status', 'warning', t('msg-no-type')); return; }
-  if (!newBaseRate || newBaseRate < 100000) { showMsg('rate-status', 'warning', t('msg-no-rate')); return; }
+  if (!roomType) { 
+    showMsg('rate-status', 'warning', t('msg-no-type')); 
+    return; 
+  }
+  if (!newBaseRate || newBaseRate < 100000) { 
+    showMsg('rate-status', 'warning', t('msg-no-rate')); 
+    return; 
+  }
+
+  // Chặn ghi log trùng
+  if (currentBaseRate !== null && newBaseRate === currentBaseRate) {
+    showMsg('rate-status', 'warning', t('msg-same-rate'));
+    return;
+  }
 
   setBusy('update-rate-btn', true);
   showMsg('rate-status', 'loading', t('msg-updating-rate'));
@@ -798,6 +818,8 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     }
 
     showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
+    currentBaseRate = newBaseRate; // Cập nhật lại giá hiện tại
+
     await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
