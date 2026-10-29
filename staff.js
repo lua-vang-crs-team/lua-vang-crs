@@ -299,16 +299,13 @@ function initPin() {
   const input   = document.getElementById('pin-input');
   const card    = document.getElementById('pin-card');
 
-  // Kiểm tra phiên đăng nhập đã có hay chưa
-  try {
-    if (sessionStorage.getItem('staff_auth') === STAFF_PIN) {
-      showApp();
-      return;
-    }
-  } catch {}
-
-  // Chưa đăng nhập: Hiện overlay
+  // Xóa phiên cũ để luôn bắt buộc nhập mã PIN khi vào trang
+  try { sessionStorage.removeItem('staff_auth'); } catch {}
   if (overlay) overlay.classList.remove('hidden');
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 100);
+  }
 
   function attempt() {
     if ((input?.value || '').trim() === STAFF_PIN) {
@@ -326,7 +323,6 @@ function initPin() {
   document.getElementById('pin-btn')?.addEventListener('click', attempt);
   input?.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
 
-  // Nút đăng xuất xóa session và khóa màn hình ngay
   document.getElementById('logout-btn')?.addEventListener('click', () => {
     try { sessionStorage.removeItem('staff_auth'); } catch {}
     if (overlay) overlay.classList.remove('hidden');
@@ -373,7 +369,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING (KHẮC PHỤC TRIỆT ĐỂ LỖI REST 400) ───
+// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -390,18 +386,15 @@ async function searchBookings() {
 
   let rows = [];
 
-  // DÙNG SELECT=* ĐỂ KHÔNG BAO GIỜ BỊ LỖI CỘT KHÔNG TỒN TẠI (REST 400)
   try {
     const raw = await restGet('booking', `?select=*&order=check_in.desc&limit=100${filterQuery}`);
     
     rows = (raw || []).map(b => {
-      // Tự động nhận diện tên khách từ mọi kiểu cấu trúc database
       const guestName = b.guest_name 
                      || b.guest?.guest_name 
                      || b.guest_id 
                      || 'Khách lưu trú';
       
-      // Tự động nhận diện kênh đặt
       const channel = b.source_channel 
                    || b.channel 
                    || b.source 
@@ -423,7 +416,6 @@ async function searchBookings() {
     return;
   }
 
-  // Lọc theo từ khóa tìm kiếm phía client
   if (name) {
     const q = name.toLowerCase();
     rows = rows.filter(b =>
