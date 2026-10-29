@@ -9,221 +9,130 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
-    /* ── VietStay brand tokens ── */
     :root {
-      --forest:     #0F2B5B;
-      --forest-mid: #163575;
-      --gold:       #E07B39;
-      --gold-dim:   #9E5520;
-      --gold-pale:  #FEF0E6;
+      --forest:     #0F2B5B; --forest-mid: #163575;
+      --gold:       #E07B39; --gold-dim:   #9E5520; --gold-pale: #FEF0E6;
     }
-
-    /* ── Inventory panel ── */
     .ota-panel {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.6rem 2rem;
-      box-shadow: var(--shadow);
+      background:var(--white); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.6rem 2rem; box-shadow:var(--shadow);
     }
-
-    .ota-panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .ota-panel-title {
-      font-family: var(--serif);
-      font-weight: 300;
-      font-size: 1.45rem;
-      color: var(--forest);
-      line-height: 1.2;
-    }
-
-    .ota-sync-badge {
-      font-size: 0.66rem;
-      font-weight: 500;
-      color: var(--muted);
-      background: var(--ivory);
-      border: 1px solid var(--border-soft);
-      border-radius: 999px;
-      padding: 0.22rem 0.65rem;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
-      align-self: center;
-    }
-    .ota-sync-badge.live::before {
-      content: "● ";
-      color: #1A8040;
-      font-size: 0.6rem;
-    }
-
-    .inv-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 0.65rem;
-      margin-top: 1.1rem;
-    }
-
-    .inv-card {
-      background: var(--ivory);
-      border: 1px solid var(--border-soft);
-      border-radius: var(--radius);
-      padding: 0.75rem 0.5rem;
-      text-align: center;
-      transition: border-color 0.14s;
-    }
-    .inv-card:hover { border-color: var(--gold); }
-
-    .inv-type {
-      font-size: 0.64rem;
-      font-weight: 500;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .inv-count {
-      font-family: var(--serif);
-      font-size: 2rem;
-      font-weight: 300;
-      color: var(--forest);
-      line-height: 1.1;
-      margin-top: 0.15rem;
-    }
-
-    .inv-sub {
-      font-size: 0.62rem;
-      color: var(--muted);
-      margin-top: 0.05rem;
-    }
-
-    .inv-card.low  .inv-count { color: #9E4F00; }
-    .inv-card.sold .inv-count { color: #8B1A10; }
-    .inv-card.sold { border-color: #e8c0bc; background: #fdf5f5; }
-
-    .ota-footer-note {
-      margin-top: 0.8rem;
-      font-size: 0.67rem;
-      color: var(--muted);
-    }
-
-    /* ── OTA badge in header ── */
-    .ota-badge {
-      display: inline-block;
-      margin-top: 0.5rem;
-      padding: 0.2rem 0.65rem;
-      background: var(--gold);
-      color: #fff;
-      font-family: var(--sans);
-      font-size: 0.59rem;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      border-radius: 2px;
-    }
-
-    /* ── OTA page layout tweak ── */
-    main { gap: 1.6rem; }
-
-    @media (max-width: 700px) {
-      .inv-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 400px) {
-      .inv-grid { grid-template-columns: repeat(2, 1fr); }
-    }
+    .ota-panel-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:.5rem; }
+    .ota-panel-title  { font-family:var(--serif); font-weight:300; font-size:1.45rem; color:var(--forest); }
+    .ota-sync-badge   { font-size:.66rem; font-weight:500; color:var(--muted); background:var(--ivory);
+                        border:1px solid var(--border-soft); border-radius:999px; padding:.22rem .65rem;
+                        letter-spacing:.04em; white-space:nowrap; align-self:center; }
+    .ota-sync-badge.live::before { content:"● "; color:#1A8040; font-size:.6rem; }
+    .inv-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:.65rem; margin-top:1.1rem; }
+    .inv-card { background:var(--ivory); border:1px solid var(--border-soft); border-radius:var(--radius);
+                padding:.75rem .5rem; text-align:center; transition:border-color .14s; }
+    .inv-card:hover { border-color:var(--gold); }
+    .inv-type  { font-size:.64rem; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .inv-count { font-family:var(--serif); font-size:2rem; font-weight:300; color:var(--forest); line-height:1.1; margin-top:.15rem; }
+    .inv-sub   { font-size:.62rem; color:var(--muted); margin-top:.05rem; }
+    .inv-card.low  .inv-count { color:#9E4F00; }
+    .inv-card.sold .inv-count { color:#8B1A10; }
+    .inv-card.sold { border-color:#e8c0bc; background:#fdf5f5; }
+    .ota-footer-note { margin-top:.8rem; font-size:.67rem; color:var(--muted); }
+    .ota-badge { display:inline-block; margin-top:.5rem; padding:.2rem .65rem; background:var(--gold); color:#fff;
+                 font-family:var(--sans); font-size:.59rem; font-weight:600; letter-spacing:.14em;
+                 text-transform:uppercase; border-radius:2px; }
+    main { gap:1.6rem; }
+    @media(max-width:700px){ .inv-grid{grid-template-columns:repeat(3,1fr);} }
+    @media(max-width:400px){ .inv-grid{grid-template-columns:repeat(2,1fr);} }
   </style>
 </head>
 <body>
-
   <header>
     <div class="header-inner">
       <div class="hotel-name">VietStay</div>
-      <div class="hotel-sub">Kênh đặt phòng trực tuyến &ensp;·&ensp; OTA Channel 1</div>
+      <div class="hotel-sub" data-i18n-html="hotel-sub">Kênh đặt phòng trực tuyến &ensp;·&ensp; OTA Channel 1</div>
       <div><span class="ota-badge">Powered by Lụa Vàng CRS</span></div>
+    </div>
+    <!-- Language toggle -->
+    <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language / Ngôn ngữ">
+      <span class="lang-opt active" data-lang="vi">VI</span>
+      <span class="lang-sep">|</span>
+      <span class="lang-opt" data-lang="en">EN</span>
     </div>
   </header>
 
   <main>
-
-    <!-- ── LIVE INVENTORY ── -->
+    <!-- INVENTORY -->
     <section class="ota-panel" id="inventory-section">
       <div class="ota-panel-header">
         <div>
-          <div class="step-tag" style="margin-bottom:0.3rem">Tình trạng phòng</div>
-          <div class="ota-panel-title">Lụa Vàng Resort &amp; Spa</div>
+          <div class="step-tag" data-i18n="inv-tag" style="margin-bottom:.3rem">Tình trạng phòng</div>
+          <div class="ota-panel-title" data-i18n-html="inv-title">Lụa Vàng Resort &amp; Spa</div>
         </div>
         <div class="ota-sync-badge live" id="inv-updated">Đang tải…</div>
       </div>
       <div class="inv-grid" id="inv-grid">
-        <div class="inv-card"><div class="inv-type">Deluxe</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
-        <div class="inv-card"><div class="inv-type">Superior</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
-        <div class="inv-card"><div class="inv-type">Suite</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
-        <div class="inv-card"><div class="inv-type">Family</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
-        <div class="inv-card"><div class="inv-type">Villa</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
-        <div class="inv-card"><div class="inv-type">Standard</div><div class="inv-count">—</div><div class="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Deluxe Ocean View</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Deluxe Garden View</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Suite Lagoon View</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Lantern Pool Villa</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Oceanfront Villa</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Presidential</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
       </div>
-      <div class="ota-footer-note">Dữ liệu được cung cấp và đồng bộ tự động bởi Lụa Vàng CRS</div>
+      <div class="ota-footer-note" data-i18n="inv-footer">Dữ liệu được cung cấp và đồng bộ tự động bởi Lụa Vàng CRS</div>
     </section>
 
-    <!-- ── STEP 1: SEARCH ── -->
+    <!-- STEP 1 -->
     <section class="step" id="search-section">
-      <div class="step-tag">Bước 1</div>
-      <h2>Tìm phòng trống</h2>
+      <div class="step-tag" data-i18n="step1-tag">Bước 1</div>
+      <h2 data-i18n="step1-h2">Tìm phòng trống</h2>
       <div class="date-row">
         <div class="field">
-          <label for="check-in">Ngày nhận phòng</label>
+          <label for="check-in" data-i18n="label-checkin">Ngày nhận phòng</label>
           <input type="date" id="check-in">
         </div>
         <span class="date-arrow">→</span>
         <div class="field">
-          <label for="check-out">Ngày trả phòng</label>
+          <label for="check-out" data-i18n="label-checkout">Ngày trả phòng</label>
           <input type="date" id="check-out">
         </div>
       </div>
-      <button class="btn btn-primary" id="search-btn">Kiểm tra phòng trống</button>
+      <button class="btn btn-primary" id="search-btn" data-i18n="btn-search">Kiểm tra phòng trống</button>
       <div id="search-status" class="msg hidden"></div>
       <div id="rooms-container"></div>
     </section>
 
-    <!-- ── STEP 2: BOOK ── -->
+    <!-- STEP 2 -->
     <section class="step" id="book-section">
-      <div class="step-tag">Bước 2</div>
-      <h2>Xác nhận đặt phòng</h2>
+      <div class="step-tag" data-i18n="step2-tag">Bước 2</div>
+      <h2 data-i18n="step2-h2">Xác nhận đặt phòng</h2>
       <div class="field">
-        <label for="selected-room">Phòng đã chọn</label>
-        <input type="text" id="selected-room"
-               placeholder="Chọn phòng từ kết quả bên trên" readonly>
+        <label for="selected-room" data-i18n="label-room">Phòng đã chọn</label>
+        <input type="text" id="selected-room" readonly
+               data-i18n-placeholder="ph-room" placeholder="Chọn phòng từ kết quả bên trên">
       </div>
       <div class="field">
-        <label for="guest-name">Tên khách lưu trú</label>
-        <input type="text" id="guest-name" placeholder="Họ và tên đầy đủ">
+        <label for="guest-name" data-i18n="label-guest">Tên khách lưu trú</label>
+        <input type="text" id="guest-name"
+               data-i18n-placeholder="ph-guest" placeholder="Họ và tên đầy đủ">
       </div>
-      <button class="btn btn-primary" id="book-btn">Xác nhận đặt phòng</button>
+      <button class="btn btn-primary" id="book-btn" data-i18n="btn-book">Xác nhận đặt phòng</button>
       <div id="book-status" class="msg hidden"></div>
       <div id="booking-result" class="booking-panel hidden"></div>
     </section>
 
-    <!-- ── STEP 3: CANCEL ── -->
+    <!-- STEP 3 -->
     <section class="step" id="cancel-section">
-      <div class="step-tag">Hủy đặt phòng</div>
-      <h2>Nhập mã để hủy</h2>
+      <div class="step-tag" data-i18n="cancel-tag">Hủy đặt phòng</div>
+      <h2 data-i18n="cancel-h2">Nhập mã để hủy</h2>
       <div class="field">
-        <label for="booking-id-input">Mã đặt phòng (Booking ID)</label>
+        <label for="booking-id-input" data-i18n="label-bid">Mã đặt phòng (Booking ID)</label>
         <input type="text" id="booking-id-input"
-               placeholder="Dán mã đặt phòng vào đây…">
+               data-i18n-placeholder="ph-bid" placeholder="Dán mã đặt phòng vào đây…">
       </div>
-      <button class="btn btn-cancel" id="cancel-btn">Hủy đặt phòng</button>
+      <button class="btn btn-cancel" id="cancel-btn" data-i18n="btn-cancel">Hủy đặt phòng</button>
       <div id="cancel-status" class="msg hidden"></div>
     </section>
-
   </main>
 
   <footer>
-    <p>VietStay &ensp;·&ensp; Kênh phân phối OTA 1 &ensp;·&ensp; Kết nối Lụa Vàng CRS &ensp;·&ensp; 2026</p>
+    <p data-i18n="footer-text">VietStay &ensp;·&ensp; Kênh phân phối OTA 1 &ensp;·&ensp; Kết nối Lụa Vàng CRS &ensp;·&ensp; 2026</p>
   </footer>
 
   <script src="ota1.js"></script>
