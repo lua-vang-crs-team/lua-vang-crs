@@ -1,6 +1,7 @@
 /* ============================================================
    VIETSTAY — OTA PORTAL
    Channel: ota_1  |  Bilingual VI/EN
+   Update: Đồng bộ giá chuẩn từ v_channel_rates (channel_code = ota_1)
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -8,7 +9,7 @@ const ANON_KEY       = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 const FN_BASE        = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE      = `${SUPABASE_URL}/rest/v1`;
 const SOURCE_CHANNEL = "ota_1";
-const CHANNEL_MULTIPLIER = 1.05;
+const CHANNEL_MULTIPLIER = 1.05; // Hệ số kênh OTA 1 (+5%)
 
 let channelRatesCache = {};
 
@@ -159,18 +160,22 @@ async function restGet(path, params = '') {
   return res.json();
 }
 
+// ── NẠP GIÁ CHUẨN THEO CHANNEL_CODE = 'ota_1' ────────────────
 async function fetchChannelRates() {
   try {
-    const rows = await restGet('v_channel_rates', `?channel=eq.${SOURCE_CHANNEL}`);
+    let rows = await restGet('v_channel_rates', `?channel_code=eq.${SOURCE_CHANNEL}`);
+    if (!rows || rows.length === 0) {
+      rows = await restGet('v_channel_rates', `?channel=eq.${SOURCE_CHANNEL}`);
+    }
     if (rows && rows.length > 0) {
       rows.forEach(r => {
         const key = String(r.room_type || '').toLowerCase().trim();
-        const price = Number(r.computed_rate ?? r.rate ?? r.channel_rate ?? 0);
+        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
         if (price > 0) channelRatesCache[key] = price;
       });
     }
   } catch (e) {
-    console.warn("Dùng hệ số x1.05 cho OTA 1:", e.message);
+    console.warn("Không đọc được v_channel_rates, chuyển sang tính từ Base Rate x 1.05:", e.message);
   }
 }
 
@@ -183,14 +188,17 @@ function setBusy(btnId, busy) {
 }
 function vnd(n) { return Number(n).toLocaleString('vi-VN')+' ₫'; }
 
+// Hiển thị giá phòng chuẩn của kênh VietStay (Base Rate x 1.05)
 function getDisplayRate(room) {
   const pn = `/${t('unit-night')}`;
   const key = String(room.room_type || '').toLowerCase().trim();
 
+  // 1. Ưu tiên giá đã tính trong v_channel_rates
   if (channelRatesCache[key]) {
     return `${vnd(channelRatesCache[key])}${pn}`;
   }
 
+  // 2. Tính từ base rate (rate_low) x 1.05
   const base = Number(room.rate_low || room.base_rate || 0);
   if (base > 0) {
     const otaPrice = Math.round(base * CHANNEL_MULTIPLIER);
@@ -217,6 +225,7 @@ function getDisplayRate(room) {
   applyLanguage(saved);
 })();
 
+// ── INVENTORY GRID ────────────────────────────────────────────
 async function loadInventory() {
   try {
     const rows = await restGet('channel_inventory',
@@ -253,6 +262,7 @@ async function loadInventory() {
   }
 }
 
+// ── SEARCH ────────────────────────────────────────────────────
 document.getElementById('search-btn')?.addEventListener('click', async ()=>{
   const ci=document.getElementById('check-in').value;
   const co=document.getElementById('check-out').value;
@@ -263,7 +273,9 @@ document.getElementById('search-btn')?.addEventListener('click', async ()=>{
   document.getElementById('rooms-container').innerHTML='';
   setBusy('search-btn',true); showMsg('search-status','loading',t('msg-searching'));
   try{
+    // Cập nhật bảng giá mới nhất
     await fetchChannelRates();
+
     const{ok,data}=await callFn('check_availability',{check_in:ci,check_out:co,source_channel:SOURCE_CHANNEL});
     if(!ok){showMsg('search-status','error',data.error||t('msg-no-rooms'));return;}
     const rooms=data.available_rooms||[];
@@ -301,6 +313,7 @@ function pickRoom(room,listEl){
   document.getElementById('book-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+// ── BOOK ──────────────────────────────────────────────────────
 document.getElementById('book-btn')?.addEventListener('click', async ()=>{
   const roomId     = (document.getElementById('selected-room').value || '').trim();
   const guestName  = (document.getElementById('guest-name').value    || '').trim();
