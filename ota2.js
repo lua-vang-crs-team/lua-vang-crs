@@ -1,7 +1,6 @@
 /* ============================================================
    STAYASIA — OTA 2  |  ota2.js
    Channel: ota_2  |  Bilingual VI/EN  |  Multi-Guest
-   Phần 3: Đồng bộ giá phòng theo hệ số kênh OTA 2 (x 1.05)
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -9,9 +8,8 @@ const ANON_KEY       = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 const FN_BASE        = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE      = `${SUPABASE_URL}/rest/v1`;
 const SOURCE_CHANNEL = "ota_2";
-const CHANNEL_MULTIPLIER = 1.05; // Hệ số kênh OTA 2
+const CHANNEL_MULTIPLIER = 1.05;
 
-// Cache bảng giá theo kênh từ v_channel_rates
 let channelRatesCache = {};
 
 // ── I18N ─────────────────────────────────────────────────────
@@ -57,7 +55,6 @@ const I18N = {
     'msg-cancelling': 'Đang xử lý hủy đặt phòng…',
     'msg-404':        'Không tìm thấy mã đặt phòng này. Kiểm tra lại mã.',
     'msg-400':        'Đơn đặt phòng này không ở trạng thái có thể hủy.',
-    'msg-wrong-channel':'Mã đặt phòng này thuộc kênh khác (không phải đặt qua StayAsia). Quý khách vui lòng truy cập đúng kênh đã đặt để hủy!',
     'msg-cancel-err': 'Không thể hủy lúc này. Thử lại sau.',
     'inv-not-synced': 'Đang kết nối lại…',
     'msg-found-rooms':(n)=>`Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
@@ -106,7 +103,6 @@ const I18N = {
     'msg-cancelling': 'Processing cancellation…',
     'msg-404':        'Booking ID not found.',
     'msg-400':        'This booking cannot be cancelled or is already cancelled.',
-    'msg-wrong-channel':'This reservation was booked via another channel. Please cancel via the original booking channel!',
     'msg-cancel-err': 'Unable to cancel booking. Please try again.',
     'inv-not-synced': 'Reconnecting…',
     'msg-found-rooms':(n)=>`Found <strong>${n}</strong> available room${n!==1?'s':''}.`,
@@ -165,7 +161,7 @@ async function fetchChannelRates() {
       });
     }
   } catch (e) {
-    console.warn("Không lấy được bảng giá từ v_channel_rates, sẽ dùng hệ số x1.05:", e.message);
+    console.warn("Dùng hệ số x1.05 cho OTA 2:", e.message);
   }
 }
 
@@ -261,7 +257,6 @@ document.getElementById('search-btn')?.addEventListener('click',async()=>{
   setBusy('search-btn',true);showMsg('search-status','loading',t('msg-searching'));
   try{
     await fetchChannelRates();
-
     const{ok,data}=await callFn('check_availability',{check_in:ci,check_out:co,source_channel:SOURCE_CHANNEL});
     if(!ok){showMsg('search-status','error',data.error||t('msg-no-rooms'));return;}
     const rooms=data.available_rooms||[];
@@ -331,43 +326,24 @@ document.getElementById('book-btn')?.addEventListener('click',async()=>{
   finally{setBusy('book-btn',false);}
 });
 
+// ── CANCEL (GỬI CHUẨN SOURCE_CHANNEL: "ota_2") ────────────────
 document.getElementById('cancel-btn')?.addEventListener('click',async()=>{
   const bookingId=(document.getElementById('booking-id-input').value||'').trim();
   if(!bookingId){showMsg('cancel-status','warning',t('msg-no-bid'));return;}
+  if(!window.confirm(t('confirm-cancel',bookingId))) return;
   
   setBusy('cancel-btn',true);showMsg('cancel-status','loading',t('msg-cancelling'));
 
   try{
-    const bookings = await restGet('booking', `?booking_id=eq.${encodeURIComponent(bookingId)}&select=*`);
-    if (!bookings || bookings.length === 0) {
-      showMsg('cancel-status', 'error', t('msg-404'));
-      return;
-    }
-
-    const b = bookings[0];
-    let originalChannel = '';
-    for (const [key, val] of Object.entries(b)) {
-      if (/channel|source/i.test(key) && val) {
-        originalChannel = String(val).toLowerCase().trim();
-        break;
-      }
-    }
-
-    if (originalChannel && originalChannel !== SOURCE_CHANNEL && originalChannel !== 'stayasia') {
-      showMsg('cancel-status', 'error', t('msg-wrong-channel'));
-      return;
-    }
-
-    if(!window.confirm(t('confirm-cancel',bookingId))) return;
-
     const{ok,status,data}=await callFn('cancel_booking',{
       booking_id:bookingId,
       source_channel:SOURCE_CHANNEL,
       channel:SOURCE_CHANNEL
     });
 
+    if(status===403){showMsg('cancel-status','error', data.error || 'Đơn đặt phòng này thuộc kênh khác!'); return;}
     if(status===404){showMsg('cancel-status','error',t('msg-404'));return;}
-    if(status===400){showMsg('cancel-status','warning',data.error||t('msg-400'));return;}
+    if(status===400 || status===409){showMsg('cancel-status','warning',data.error||t('msg-400'));return;}
     if(!ok){showMsg('cancel-status','error',data.error||t('msg-cancel-err'));return;}
 
     showMsg('cancel-status','success',t('msg-cancel-ok',bookingId));
