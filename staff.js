@@ -1,7 +1,7 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Fix: Tách biệt Base Rate chuẩn cho từng hạng phòng riêng biệt
+   Update: Đồng bộ 6 Room Types chuẩn DB & Xử lý Rate Management
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -10,28 +10,15 @@ const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
 const STAFF_PIN    = "2026";
 
-// Bảng giá cơ sở chuẩn (Base Rate) theo từng hạng phòng riêng biệt của Lụa Vàng Resort
-const DEFAULT_ROOM_BASE_RATES = {
-  "deluxe garden view":      4800000,
-  "deluxe ocean view":       5200000,
-  "suite lagoon view":       7500000,
-  "lantern pool villa":      11500000,
-  "oceanfront villa":        14500000,
-  "presidential silk villa": 28000000
-};
-
-// Danh mục 6 hạng phòng chuẩn
+// ── 1. DANH MỤC 6 HẠNG PHÒNG CHUẨN KHỚP 100% INVENTORY ROOM ──
 const DEFAULT_ROOM_TYPES = [
   "Deluxe Ocean View",
-  "Deluxe Garden View",
-  "Suite Lagoon View",
+  "Premier Garden View",
+  "Junior Suite Lagoon",
   "Lantern Pool Villa",
-  "Oceanfront Villa",
+  "Two-Bedroom Beachfront Villa",
   "Presidential Silk Villa"
 ];
-
-// Lưu trữ bộ nhớ cache giá cơ sở đã cập nhật trong phiên làm việc
-const runtimeBaseRates = {};
 
 // ── I18N ──────────────────────────────────────────────────────
 const I18N = {
@@ -200,6 +187,7 @@ let currentRoomTypeRate  = null;
 let currentBaseRate      = null;
 let nbSearchDates        = {};
 let nbSelectedRoom       = null;
+let isUpdatingRate       = false; // Chặn double click
 
 // ── TRANSLATE & FORMAT ─────────────────────────────────────────
 function t(key, ...args) {
@@ -271,6 +259,7 @@ function getStatusBadge(status) {
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
 
+// Đọc source_channel từ DB hiển thị nhãn chuẩn
 function getChannelBadge(sourceChannel) {
   const ch = String(sourceChannel || '').toLowerCase().trim();
   if (ch === 'ota_1' || ch.includes('vietstay')) {
@@ -396,7 +385,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
+// ── TAB 1: QUẢN LÝ BOOKING (ĐỌC SOURCE_CHANNEL) ────────────────
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -656,7 +645,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (RIÊNG BIỆT CHO TỪNG HẠNG PHÒNG) ───
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (CHÍNH XÁC THEO INVENTORY DB) ──────
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -670,6 +659,7 @@ async function loadRoomTypes() {
     types = DEFAULT_ROOM_TYPES;
   }
 
+  // Đảm bảo luôn lấy danh mục 6 hạng phòng chuẩn theo inventory
   if (!types.length) types = DEFAULT_ROOM_TYPES;
 
   sel.innerHTML = `<option value="">${currentLang === 'en' ? 'Select room category…' : 'Chọn hạng phòng…'}</option>`;
@@ -690,15 +680,6 @@ function resetRateCards() {
   currentBaseRate = null;
 }
 
-// Cập nhật 4 thẻ kênh theo Base Rate chuẩn xác
-function updateChannelRateCards(baseRate) {
-  if (!baseRate || baseRate <= 0) return;
-  document.getElementById('price-direct').textContent = vndFmt(Math.round(baseRate * 0.95));
-  document.getElementById('price-ota1').textContent   = vndFmt(Math.round(baseRate * 1.05));
-  document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
-  document.getElementById('price-gds').textContent    = vndFmt(baseRate);
-}
-
 async function loadCurrentRates(roomType) {
   resetRateCards();
   if (!roomType) return;
@@ -706,71 +687,83 @@ async function loadCurrentRates(roomType) {
   const inp = document.getElementById('rate-base-input');
   if (inp) inp.placeholder = 'Đang tải giá…';
 
-  const normalizedType = roomType.toLowerCase().trim();
-
-  // 1. Nếu hạng phòng này đã từng cập nhật trong phiên hiện tại -> ưu tiên lấy ngay
-  if (runtimeBaseRates[normalizedType]) {
-    const cachedRate = runtimeBaseRates[normalizedType];
-    inp.value = cachedRate;
-    currentBaseRate = cachedRate;
-    updateChannelRateCards(cachedRate);
-    return;
-  }
+  const channelMap = {
+    direct: 'price-direct',
+    ota_1:  'price-ota1',
+    ota_2:  'price-ota2',
+    gds:    'price-gds'
+  };
 
   try {
     let baseRate = null;
-    const channelMap = {
-      direct: 'price-direct',
-      ota_1:  'price-ota1',
-      ota_2:  'price-ota2',
-      gds:    'price-gds'
-    };
+    let rows = [];
 
-    // 2. Thử truy vấn từ view v_channel_rates
+    // 1. QUERY TRỰC TIẾP TỪ VIEW v_channel_rates
     try {
-      const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
-      if (rows && rows.length > 0) {
-        rows.forEach(r => {
+      rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
+      if (!rows || rows.length === 0) {
+        rows = await restGet('v_channel_rates', `?room_type=ilike.${encodeURIComponent(roomType.trim())}`);
+      }
+    } catch (e) {
+      console.warn("Lỗi đọc view v_channel_rates:", e.message);
+    }
+
+    if (rows && rows.length > 0) {
+      rows.forEach(r => {
+        const code = String(r.channel_code || r.channel || r.source_channel || '').toLowerCase().trim();
+        const elId = channelMap[code];
+        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+        if (elId && price > 0) {
+          const el = document.getElementById(elId);
+          if (el) el.textContent = vndFmt(price);
+        }
+        if (!baseRate && r.base_rate) {
+          baseRate = Number(r.base_rate);
+        }
+      });
+
+      if (baseRate && inp) {
+        inp.value = baseRate;
+        currentBaseRate = baseRate;
+        inp.placeholder = '4000000';
+        return;
+      }
+    }
+
+    // 2. FALLBACK TÍNH THEO MULTIPLIER TỪ ROOM BASE RATE NẾU VIEW CHƯA MAP
+    const [rulesRes, roomsRes] = await Promise.allSettled([
+      restGet('rate_rule', `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=*`),
+      restGet('room', `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=rate_low&limit=1`)
+    ]);
+
+    const roomsData = roomsRes.status === 'fulfilled' ? roomsRes.value : [];
+    const rulesData = rulesRes.status === 'fulfilled' ? rulesRes.value : [];
+
+    baseRate = Number(roomsData?.[0]?.rate_low) || null;
+
+    if (baseRate && inp) {
+      inp.value = baseRate;
+      currentBaseRate = baseRate;
+      inp.placeholder = '4000000';
+
+      if (rulesData && rulesData.length > 0) {
+        rulesData.forEach(r => {
           const code = String(r.channel_code || r.channel || r.source_channel || '').toLowerCase().trim();
           const elId = channelMap[code];
-          const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
-          if (elId && price > 0) {
-            const el = document.getElementById(elId);
-            if (el) el.textContent = vndFmt(price);
-          }
-          if (!baseRate && r.base_rate) {
-            baseRate = Number(r.base_rate);
+          const mult = Number(r.multiplier || 1.0);
+          if (elId) {
+            document.getElementById(elId).textContent = vndFmt(Math.round(baseRate * mult));
           }
         });
-
-        if (baseRate && inp) {
-          inp.value = baseRate;
-          currentBaseRate = baseRate;
-          runtimeBaseRates[normalizedType] = baseRate;
-          return;
-        }
+      } else {
+        document.getElementById('price-direct').textContent = vndFmt(Math.round(baseRate * 0.95));
+        document.getElementById('price-ota1').textContent   = vndFmt(Math.round(baseRate * 1.05));
+        document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
+        document.getElementById('price-gds').textContent    = vndFmt(baseRate);
       }
-    } catch (e1) {
-      console.warn("Lỗi đọc v_channel_rates:", e1.message);
+    } else {
+      if (inp) inp.placeholder = 'Chưa có giá cơ sở';
     }
-
-    // 3. Thử lấy giá từ bảng room cho đúng room_type đang chọn
-    try {
-      const roomRows = await restGet('room', `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=rate_low&limit=1`);
-      if (roomRows && roomRows.length > 0 && Number(roomRows[0].rate_low) > 0) {
-        baseRate = Number(roomRows[0].rate_low);
-      }
-    } catch (e2) {}
-
-    // 4. Nếu database chưa có, dùng Base Rate chuẩn theo danh mục riêng của hạng phòng đó
-    if (!baseRate) {
-      baseRate = DEFAULT_ROOM_BASE_RATES[normalizedType] || 4800000;
-    }
-
-    inp.value = baseRate;
-    currentBaseRate = baseRate;
-    runtimeBaseRates[normalizedType] = baseRate;
-    updateChannelRateCards(baseRate);
 
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
@@ -778,7 +771,7 @@ async function loadCurrentRates(roomType) {
   }
 }
 
-// Bắt sự kiện dropdown: chọn room_type nào là load đúng giá của riêng room_type đó
+// Bắt sự kiện chọn hạng phòng
 document.getElementById('rate-room-type')?.addEventListener('change', async function() {
   const rt = this.value;
   currentRoomTypeRate = rt || null;
@@ -794,9 +787,13 @@ document.getElementById('rate-room-type')?.addEventListener('change', async func
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
 });
 
+// Xử lý nút Cập nhật giá: Chặn duplicate click, chặn giá trùng và truyền đúng changed_by
 document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
+  if (isUpdatingRate) return; // Chặn double click tạo 2 dòng log
+
   const roomType    = (document.getElementById('rate-room-type')?.value || '').trim();
   const newBaseRate = Number(document.getElementById('rate-base-input')?.value);
+  const changedBy   = (document.getElementById('rate-changed-by')?.value || 'Revenue Manager').trim();
 
   if (!roomType) { 
     showMsg('rate-status', 'warning', t('msg-no-type')); 
@@ -807,12 +804,13 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     return; 
   }
 
-  // Chặn ghi log thừa khi giá mới trùng giá hiện tại
+  // Chặn ghi log thừa khi giá mới = giá hiện tại
   if (currentBaseRate !== null && newBaseRate === currentBaseRate) {
     showMsg('rate-status', 'warning', t('msg-same-rate'));
     return;
   }
 
+  isUpdatingRate = true;
   setBusy('update-rate-btn', true);
   showMsg('rate-status', 'loading', t('msg-updating-rate'));
 
@@ -820,7 +818,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     const { ok, data } = await callFn('update_base_rate', {
       room_type:     roomType,
       new_base_rate: newBaseRate,
-      changed_by:    null
+      changed_by:    changedBy // Truyền đúng Revenue Manager xuống DB
     });
 
     if (!ok) {
@@ -829,17 +827,14 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     }
 
     showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
-    
-    // Cập nhật lại giá riêng cho hạng phòng này vào state
-    const normalizedType = roomType.toLowerCase().trim();
-    runtimeBaseRates[normalizedType] = newBaseRate;
     currentBaseRate = newBaseRate;
-    updateChannelRateCards(newBaseRate);
 
-    await loadRateHistory(roomType);
+    // Load lại trực tiếp từ DB ngay sau khi cập nhật
+    await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
   } finally {
+    isUpdatingRate = false;
     setBusy('update-rate-btn', false);
   }
 });
@@ -859,7 +854,7 @@ async function loadRateHistory(roomType) {
     wrap.innerHTML = `
       <table class="bookings-table">
         <thead><tr>
-          <th>Hạng phòng</th><th>Giá cũ</th><th>Giá điều chỉnh</th><th>Thời gian cập nhật</th>
+          <th>Hạng phòng</th><th>Giá cũ</th><th>Giá điều chỉnh</th><th>Người thực hiện</th><th>Thời gian cập nhật</th>
         </tr></thead>
         <tbody id="history-tbody"></tbody>
       </table>`;
@@ -872,6 +867,7 @@ async function loadRateHistory(roomType) {
         <td>${r.room_type}</td>
         <td style="color:var(--muted)">${r.old_base_rate ? vndFmt(r.old_base_rate) : '—'}</td>
         <td style="color:var(--forest);font-weight:500">${r.new_base_rate ? vndFmt(r.new_base_rate) : '—'}</td>
+        <td style="font-size:0.77rem;color:var(--muted)">${r.changed_by || 'Revenue Manager'}</td>
         <td style="font-size:0.77rem;color:var(--muted)">${d}</td>`;
       tbody.appendChild(tr);
     });
