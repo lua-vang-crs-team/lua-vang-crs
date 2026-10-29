@@ -254,7 +254,6 @@ function getStatusBadge(status) {
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
 
-// Render Badge cho Kênh Đặt Phòng chuẩn xác
 function getChannelBadge(ch) {
   const c = String(ch || '').toLowerCase().trim();
   if (c === 'ota_1' || c.includes('vietstay')) {
@@ -311,7 +310,6 @@ function initPin() {
   const input   = document.getElementById('pin-input');
   const card    = document.getElementById('pin-card');
 
-  // Xóa phiên cũ để luôn bắt buộc nhập mã PIN khi vào trang
   try { sessionStorage.removeItem('staff_auth'); } catch {}
   if (overlay) overlay.classList.remove('hidden');
   if (input) {
@@ -381,7 +379,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING (Nhận diện chính xác 100% Kênh Đặt) ──
+// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -402,13 +400,11 @@ async function searchBookings() {
     const raw = await restGet('booking', `?select=*&order=check_in.desc&limit=100${filterQuery}`);
     
     rows = (raw || []).map(b => {
-      // 1. Quét tìm tên khách
       const guestName = b.guest_name 
                      || b.guest?.guest_name 
                      || b.guest_id 
                      || 'Khách lưu trú';
       
-      // 2. Quét tìm kênh đặt thực tế từ DB
       let detectedChannel = 'direct';
       for (const [key, val] of Object.entries(b)) {
         if (/channel|source/i.test(key) && val) {
@@ -425,7 +421,6 @@ async function searchBookings() {
         check_out:      b.check_out || '—',
         status:         b.status || 'confirmed',
         source_channel: detectedChannel,
-        raw_data:       b
       };
     });
 
@@ -434,7 +429,6 @@ async function searchBookings() {
     return;
   }
 
-  // Lọc theo từ khóa tìm kiếm phía client
   if (name) {
     const q = name.toLowerCase();
     rows = rows.filter(b =>
@@ -650,7 +644,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ ───────────────────────────────────
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (DATA BINDING CHUẨN V_CHANNEL_RATES) ───
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -676,59 +670,93 @@ async function loadRoomTypes() {
 
 function resetRateCards() {
   ['price-direct', 'price-ota1', 'price-ota2', 'price-gds'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.textContent = '—';
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
   });
+  const inp = document.getElementById('rate-base-input');
+  if (inp) inp.value = '';
 }
 
 async function loadCurrentRates(roomType) {
   resetRateCards();
   if (!roomType) return;
+
+  const inp = document.getElementById('rate-base-input');
+  if (inp) inp.placeholder = 'Đang tải giá...';
+
   try {
     let baseRate = null;
-    const channelMap = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
+    const channelMap = {
+      direct: 'price-direct',
+      ota_1:  'price-ota1',
+      ota_2:  'price-ota2',
+      gds:    'price-gds'
+    };
 
+    // 1. Ưu tiên lấy trực tiếp từ view v_channel_rates
     try {
       const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType)}`);
-      if (rows?.length) {
+      if (rows && rows.length > 0) {
         rows.forEach(r => {
-          const elId = channelMap[r.channel];
-          const price = r.computed_rate ?? r.rate ?? null;
-          if (elId && price) document.getElementById(elId).textContent = vndFmt(price);
-          if (!baseRate && r.base_rate) baseRate = Number(r.base_rate);
+          const chKey = String(r.channel || r.source_channel || r.channel_name || '').toLowerCase().trim();
+          const elId = channelMap[chKey];
+          const channelPrice = Number(r.computed_rate ?? r.rate ?? r.channel_rate ?? 0);
+          if (elId && channelPrice > 0) {
+            const el = document.getElementById(elId);
+            if (el) el.textContent = vndFmt(channelPrice);
+          }
+          if (!baseRate && r.base_rate) {
+            baseRate = Number(r.base_rate);
+          }
         });
-        if (baseRate) {
-          const inp = document.getElementById('rate-base-input');
-          if (inp) inp.value = baseRate;
-        }
-        return;
-      }
-    } catch {}
 
-    const [rules, rooms] = await Promise.allSettled([
-      restGet('rate_rule', `?room_type=eq.${encodeURIComponent(roomType)}&select=channel,multiplier`),
+        if (baseRate && inp) {
+          inp.value = baseRate;
+          inp.placeholder = '4000000';
+          return;
+        }
+      }
+    } catch (vErr) {
+      console.warn("Chưa truy vấn được v_channel_rates, chuyển sang tính từ rate_rule:", vErr.message);
+    }
+
+    // 2. Fallback tính từ rate_rule và base_rate thực tế
+    const [rulesRes, roomsRes] = await Promise.allSettled([
+      restGet('rate_rule', `?room_type=eq.${encodeURIComponent(roomType)}&select=*`),
       restGet('room', `?room_type=eq.${encodeURIComponent(roomType)}&select=rate_low&limit=1`)
     ]);
 
-    const roomsData = rooms.status === 'fulfilled' ? rooms.value : [];
-    const rulesData = rules.status === 'fulfilled' ? rules.value : [];
+    const roomsData = roomsRes.status === 'fulfilled' ? roomsRes.value : [];
+    const rulesData = rulesRes.status === 'fulfilled' ? rulesRes.value : [];
 
-    baseRate = Number(roomsData?.[0]?.rate_low) || 4000000;
-    const inp = document.getElementById('rate-base-input');
-    if (inp) inp.value = baseRate;
+    baseRate = Number(roomsData?.[0]?.rate_low) || null;
 
-    if (rulesData?.length) {
-      rulesData.forEach(r => {
-        const elId = channelMap[r.channel];
-        if (elId) document.getElementById(elId).textContent = vndFmt(Math.round(baseRate * Number(r.multiplier)));
-      });
+    if (baseRate && inp) {
+      inp.value = baseRate;
+      inp.placeholder = '4000000';
+
+      if (rulesData && rulesData.length > 0) {
+        rulesData.forEach(r => {
+          const chKey = String(r.channel || r.source_channel || '').toLowerCase().trim();
+          const elId = channelMap[chKey];
+          const mult = Number(r.multiplier || 1.0);
+          if (elId) {
+            document.getElementById(elId).textContent = vndFmt(Math.round(baseRate * mult));
+          }
+        });
+      } else {
+        document.getElementById('price-direct').textContent = vndFmt(Math.round(baseRate * 0.95));
+        document.getElementById('price-ota1').textContent   = vndFmt(Math.round(baseRate * 1.05));
+        document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
+        document.getElementById('price-gds').textContent    = vndFmt(baseRate);
+      }
     } else {
-      document.getElementById('price-direct').textContent = vndFmt(Math.round(baseRate * 0.95));
-      document.getElementById('price-ota1').textContent   = vndFmt(Math.round(baseRate * 1.05));
-      document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
-      document.getElementById('price-gds').textContent    = vndFmt(baseRate);
+      if (inp) inp.placeholder = 'Chưa có giá cơ sở';
     }
+
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
+    if (inp) inp.placeholder = 'Lỗi kết nối';
   }
 }
 
@@ -738,9 +766,10 @@ document.getElementById('rate-room-type')?.addEventListener('change', async func
   hideMsg('rate-status');
   if (!rt) {
     resetRateCards();
-    document.getElementById('rate-history-container').innerHTML =
-      `<div class="no-results">${t('select-type-first')}</div>`;
-    const inp = document.getElementById('rate-base-input'); if (inp) inp.value = '';
+    const container = document.getElementById('rate-history-container');
+    if (container) {
+      container.innerHTML = `<div class="no-results">${t('select-type-first')}</div>`;
+    }
     return;
   }
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
