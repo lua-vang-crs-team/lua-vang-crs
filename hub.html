@@ -48,11 +48,12 @@
       flex-direction: column;
     }
 
-    /* ── HEADER ── */
+    /* ── HEADER & LANGUAGE TOGGLE ── */
     header {
       background: var(--forest);
       padding: 2.8rem 2rem 2.4rem;
       text-align: center;
+      position: relative;
     }
 
     .hotel-name {
@@ -71,6 +72,49 @@
       color: rgba(255,255,255,0.45);
       letter-spacing: 0.18em;
       text-transform: uppercase;
+    }
+
+    .lang-toggle {
+      position: absolute;
+      top: 1.1rem;
+      right: 1.4rem;
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(201,169,75,0.3);
+      border-radius: 999px;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .lang-opt {
+      padding: 0.28rem 0.72rem;
+      font-family: var(--sans);
+      font-size: 0.64rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1.6;
+    }
+
+    .lang-opt.active {
+      background: var(--gold);
+      color: var(--forest);
+      cursor: default;
+      font-weight: 700;
+    }
+
+    .lang-opt:hover:not(.active) {
+      background: rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.85);
+    }
+
+    .lang-sep {
+      color: rgba(255,255,255,0.2);
+      font-size: 0.58rem;
+      pointer-events: none;
     }
 
     /* ── MAIN LAYOUT ── */
@@ -190,7 +234,6 @@
       right: 1.1rem;
     }
 
-    /* Phối màu theo từng cổng */
     .card-direct { border-top-color: var(--c-direct); }
     .card-direct:hover::after { color: var(--c-direct); }
 
@@ -262,7 +305,6 @@
     .badge-ota2   { background: #EAF8F0; color: #166A3B; }
     .badge-staff  { background: #EDF3FA; color: #1C4675; }
 
-    /* ── PIN HINT ── */
     .pin-hint-row {
       margin-top: 0.4rem;
       display: flex;
@@ -326,12 +368,12 @@
       letter-spacing: 0.04em;
     }
 
-    /* ── RESPONSIVE ── */
     @media (max-width: 680px) {
       .portal-grid { grid-template-columns: 1fr; }
       .info-row    { grid-template-columns: 1fr; }
       .arch-flow   { flex-direction: column; align-items: flex-start; }
       .arch-flow .arrow { transform: rotate(90deg); margin: 0.2rem 0; }
+      .lang-toggle { top: 0.85rem; right: 1rem; }
     }
   </style>
 </head>
@@ -339,27 +381,34 @@
 
   <header>
     <div class="hotel-name">Lụa Vàng</div>
-    <div class="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Hệ Thống Quản Trị Đặt Phòng Tập Trung (CRS)</div>
+    <div class="hotel-sub" data-i18n-html="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Hệ Thống Quản Trị Đặt Phòng Tập Trung (CRS)</div>
+
+    <!-- Nút chuyển ngôn ngữ VI / EN -->
+    <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language / Ngôn ngữ">
+      <span class="lang-opt active" data-lang="vi">VI</span>
+      <span class="lang-sep">|</span>
+      <span class="lang-opt" data-lang="en">EN</span>
+    </div>
   </header>
 
   <main>
 
     <div class="hub-intro">
-      <h2>Trung Tâm Điều Hành Hệ Thống</h2>
-      <p>Cổng truy cập thống nhất giữa kênh đặt phòng trực tiếp của khách sạn, mạng lưới đối tác phân phối OTA và cổng quản trị nội bộ.</p>
+      <h2 data-i18n="hub-title">Trung Tâm Điều Hành Hệ Thống</h2>
+      <p data-i18n="hub-desc">Cổng truy cập thống nhất giữa kênh đặt phòng trực tiếp của khách sạn, mạng lưới đối tác phân phối OTA và cổng quản trị nội bộ.</p>
     </div>
 
     <!-- SƠ ĐỒ LUỒNG ĐỒNG BỘ DỮ LIỆU -->
     <div class="arch-note">
-      <div class="arch-title">Kiến trúc kết nối &amp; Luồng đồng bộ thời gian thực:</div>
+      <div class="arch-title" data-i18n="arch-title">Kiến trúc kết nối &amp; Luồng đồng bộ thời gian thực:</div>
       <div class="arch-flow">
-        <span class="node">Kênh Direct / OTA 1 / OTA 2</span>
+        <span class="node" data-i18n="node-channels">Kênh Direct / OTA 1 / OTA 2</span>
         <span class="arrow">→</span>
         <span class="node">Supabase Edge Functions</span>
         <span class="arrow">→</span>
-        <span class="node">Cơ sở dữ liệu PostgreSQL</span>
+        <span class="node" data-i18n="node-db">Cơ sở dữ liệu PostgreSQL</span>
         <span class="arrow">→</span>
-        <span class="node">Đồng bộ tồn kho tự động (Inventory Sync)</span>
+        <span class="node" data-i18n="node-sync">Đồng bộ tồn kho tự động (Inventory Sync)</span>
       </div>
     </div>
 
@@ -370,16 +419,16 @@
       <a href="index.html" class="portal-card card-direct">
         <div class="card-channel-tag">
           <span class="channel-dot"></span>
-          Kênh Trực Tiếp &ensp;·&ensp; Direct Website
+          <span data-i18n="tag-direct">Kênh Trực Tiếp · Direct Website</span>
         </div>
         <div class="card-name">Direct Booking</div>
-        <div class="card-desc">
+        <div class="card-desc" data-i18n="desc-direct">
           Cổng đặt phòng trực tuyến dành riêng cho khách hàng của resort. Tra cứu phòng trống theo ngày, tiếp nhận thông tin và cấp phát mã xác nhận.
         </div>
         <div class="card-badges">
-          <span class="badge badge-direct">Giá ưu đãi (-5%)</span>
-          <span class="badge badge-direct">Tra cứu trực tuyến</span>
-          <span class="badge badge-direct">Hủy tự phục vụ</span>
+          <span class="badge badge-direct" data-i18n="badge-direct-1">Giá ưu đãi (-5%)</span>
+          <span class="badge badge-direct" data-i18n="badge-direct-2">Tra cứu trực tuyến</span>
+          <span class="badge badge-direct" data-i18n="badge-direct-3">Hủy tự phục vụ</span>
         </div>
       </a>
 
@@ -387,16 +436,16 @@
       <a href="ota1.html" class="portal-card card-ota1">
         <div class="card-channel-tag">
           <span class="channel-dot"></span>
-          Kênh Phân Phối Đối Tác &ensp;·&ensp; OTA 1
+          <span data-i18n="tag-ota1">Kênh Phân Phối Đối Tác · OTA 1</span>
         </div>
         <div class="card-name">VietStay Portal</div>
-        <div class="card-desc">
+        <div class="card-desc" data-i18n="desc-ota1">
           Kênh phân phối trực tuyến trong nước. Theo dõi tình trạng phòng trống tự động và xử lý giao dịch đặt/hủy đồng bộ theo thời gian thực.
         </div>
         <div class="card-badges">
-          <span class="badge badge-ota1">Đồng bộ tự động</span>
-          <span class="badge badge-ota1">Hoa hồng kênh (+5%)</span>
-          <span class="badge badge-ota1">Cập nhật tồn kho</span>
+          <span class="badge badge-ota1" data-i18n="badge-ota1-1">Đồng bộ tự động</span>
+          <span class="badge badge-ota1" data-i18n="badge-ota1-2">Hoa hồng kênh (+5%)</span>
+          <span class="badge badge-ota1" data-i18n="badge-ota1-3">Cập nhật tồn kho</span>
         </div>
       </a>
 
@@ -404,16 +453,16 @@
       <a href="ota2.html" class="portal-card card-ota2">
         <div class="card-channel-tag">
           <span class="channel-dot"></span>
-          Kênh Quốc Tế &ensp;·&ensp; OTA 2
+          <span data-i18n="tag-ota2">Kênh Quốc Tế · OTA 2</span>
         </div>
         <div class="card-name">StayAsia Portal</div>
-        <div class="card-desc">
+        <div class="card-desc" data-i18n="desc-ota2">
           Nền tảng phân phối khu vực Châu Á. Tích hợp khả năng định danh hồ sơ khách hàng trung thành và hỗ trợ danh sách khách lưu trú cùng phòng.
         </div>
         <div class="card-badges">
-          <span class="badge badge-ota2">Hồ sơ khách hàng</span>
-          <span class="badge badge-ota2">Đặt theo nhóm</span>
-          <span class="badge badge-ota2">Làm mới 30 giây</span>
+          <span class="badge badge-ota2" data-i18n="badge-ota2-1">Hồ sơ khách hàng</span>
+          <span class="badge badge-ota2" data-i18n="badge-ota2-2">Đặt theo nhóm</span>
+          <span class="badge badge-ota2" data-i18n="badge-ota2-3">Làm mới 30 giây</span>
         </div>
       </a>
 
@@ -421,19 +470,19 @@
       <a href="staff.html" class="portal-card card-staff">
         <div class="card-channel-tag">
           <span class="channel-dot"></span>
-          Cổng Nội Bộ &ensp;·&ensp; Phân Quyền Quản Trị
+          <span data-i18n="tag-staff">Cổng Nội Bộ · Phân Quyền Quản Trị</span>
         </div>
         <div class="card-name">Staff Portal</div>
-        <div class="card-desc">
+        <div class="card-desc" data-i18n="desc-staff">
           Hệ thống điều hành trung tâm dành cho bộ phận Lễ tân và Quản trị doanh thu. Quản lý danh sách booking, kiểm soát tình trạng buồng và điều chỉnh biểu giá phân phối.
         </div>
         <div class="card-badges">
-          <span class="badge badge-staff">Quản lý buồng phòng</span>
-          <span class="badge badge-staff">Quản trị bảng giá</span>
-          <span class="badge badge-staff">Thống kê vận hành</span>
+          <span class="badge badge-staff" data-i18n="badge-staff-1">Quản lý buồng phòng</span>
+          <span class="badge badge-staff" data-i18n="badge-staff-2">Quản trị bảng giá</span>
+          <span class="badge badge-staff" data-i18n="badge-staff-3">Thống kê vận hành</span>
         </div>
         <div class="pin-hint-row">
-          Mã xác thực nhân viên: <span class="pin-box">2026</span>
+          <span data-i18n="label-pin">Mã xác thực nhân viên:</span> <span class="pin-box">2026</span>
         </div>
       </a>
 
@@ -442,15 +491,15 @@
     <!-- THÔNG TIN KẾT NỐI HỆ THỐNG -->
     <div class="info-row">
       <div class="info-card">
-        <div class="ic-label">Cơ Sở Dữ Liệu Trung Tâm</div>
+        <div class="ic-label" data-i18n="info-db">Cơ Sở Dữ Liệu Trung Tâm</div>
         <div class="ic-value">scxjezoysmwyumyebuls (PostgreSQL)</div>
       </div>
       <div class="info-card">
-        <div class="ic-label">Dịch Vụ Xử Lý Giao Dịch</div>
+        <div class="ic-label" data-i18n="info-api">Dịch Vụ Xử Lý Giao Dịch</div>
         <div class="ic-value">Edge Functions / Restful API</div>
       </div>
       <div class="info-card">
-        <div class="ic-label">Hạ Tầng Triển Khai</div>
+        <div class="ic-label" data-i18n="info-repo">Hạ Tầng Triển Khai</div>
         <div class="ic-value">GitHub Pages · Lụa Vàng CRS 2026</div>
       </div>
     </div>
@@ -458,8 +507,125 @@
   </main>
 
   <footer>
-    <p>Lụa Vàng Resort &amp; Spa · Hệ Thống Quản Trị Đặt Phòng Tập Trung (Central Reservation System) · 2026</p>
+    <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa · Hệ Thống Quản Trị Đặt Phòng Tập Trung (Central Reservation System) · 2026</p>
   </footer>
 
+  <script>
+    // ── BỘ TỪ ĐIỂN SONG NGỮ (I18N) ──
+    const I18N_HUB = {
+      vi: {
+        'hotel-sub':       'Resort &amp; Spa &ensp;·&ensp; Hệ Thống Quản Trị Đặt Phòng Tập Trung (CRS)',
+        'hub-title':        'Trung Tâm Điều Hành Hệ Thống',
+        'hub-desc':         'Cổng truy cập thống nhất giữa kênh đặt phòng trực tiếp của khách sạn, mạng lưới đối tác phân phối OTA và cổng quản trị nội bộ.',
+        'arch-title':       'Kiến trúc kết nối & Luồng đồng bộ thời gian thực:',
+        'node-channels':    'Kênh Direct / OTA 1 / OTA 2',
+        'node-db':          'Cơ sở dữ liệu PostgreSQL',
+        'node-sync':        'Đồng bộ tồn kho tự động (Inventory Sync)',
+        'tag-direct':       'Kênh Trực Tiếp · Direct Website',
+        'desc-direct':      'Cổng đặt phòng trực tuyến dành riêng cho khách hàng của resort. Tra cứu phòng trống theo ngày, tiếp nhận thông tin và cấp phát mã xác nhận.',
+        'badge-direct-1':   'Giá ưu đãi (-5%)',
+        'badge-direct-2':   'Tra cứu trực tuyến',
+        'badge-direct-3':   'Hủy tự phục vụ',
+        'tag-ota1':         'Kênh Phân Phối Đối Tác · OTA 1',
+        'desc-ota1':        'Kênh phân phối trực tuyến trong nước. Theo dõi tình trạng phòng trống tự động và xử lý giao dịch đặt/hủy đồng bộ theo thời gian thực.',
+        'badge-ota1-1':     'Đồng bộ tự động',
+        'badge-ota1-2':     'Hoa hồng kênh (+5%)',
+        'badge-ota1-3':     'Cập nhật tồn kho',
+        'tag-ota2':         'Kênh Quốc Tế · OTA 2',
+        'desc-ota2':        'Nền tảng phân phối khu vực Châu Á. Tích hợp khả năng định danh hồ sơ khách hàng trung thành và hỗ trợ danh sách khách lưu trú cùng phòng.',
+        'badge-ota2-1':     'Hồ sơ khách hàng',
+        'badge-ota2-2':     'Đặt theo nhóm',
+        'badge-ota2-3':     'Làm mới 30 giây',
+        'tag-staff':        'Cổng Nội Bộ · Phân Quyền Quản Trị',
+        'desc-staff':       'Hệ thống điều hành trung tâm dành cho bộ phận Lễ tân và Quản trị doanh thu. Quản lý danh sách booking, kiểm soát tình trạng buồng và điều chỉnh biểu giá phân phối.',
+        'badge-staff-1':    'Quản lý buồng phòng',
+        'badge-staff-2':    'Quản trị bảng giá',
+        'badge-staff-3':    'Thống kê vận hành',
+        'label-pin':        'Mã xác thực nhân viên:',
+        'info-db':          'Cơ Sở Dữ Liệu Trung Tâm',
+        'info-api':         'Dịch Vụ Xử Lý Giao Dịch',
+        'info-repo':        'Hạ Tầng Triển Khai',
+        'footer-text':      'Lụa Vàng Resort & Spa · Hệ Thống Quản Trị Đặt Phòng Tập Trung (Central Reservation System) · 2026'
+      },
+      en: {
+        'hotel-sub':       'Resort &amp; Spa &ensp;·&ensp; Central Reservation System (CRS)',
+        'hub-title':        'System Operations Hub',
+        'hub-desc':         'Unified access portal connecting the hotel direct booking engine, OTA partner distribution networks, and staff PMS management.',
+        'arch-title':       'Connectivity Architecture & Real-Time Sync Flow:',
+        'node-channels':    'Direct / OTA 1 / OTA 2 Channels',
+        'node-db':          'PostgreSQL Database Engine',
+        'node-sync':        'Authoritative Inventory Synchronization',
+        'tag-direct':       'Direct Booking Engine · Website',
+        'desc-direct':      'Official reservation portal for hotel guests. Real-time availability lookup, secure guest registration, and instant booking issuance.',
+        'badge-direct-1':   'Best Rate (-5%)',
+        'badge-direct-2':   'Live Search',
+        'badge-direct-3':   'Self-Service Cancel',
+        'tag-ota1':         'Domestic Partner Channel · OTA 1',
+        'desc-ota1':        'Primary regional distribution partner. Continuous two-way availability synchronization, live reservations, and instant booking push.',
+        'badge-ota1-1':     'Real-Time Sync',
+        'badge-ota1-2':     'Commission Rate (+5%)',
+        'badge-ota1-3':     'Live Inventory',
+        'tag-ota2':         'International Partner · OTA 2',
+        'desc-ota2':        'Pan-Asian luxury travel channel. Features automated guest profile recognition, CRM history matching, and multi-guest rooming lists.',
+        'badge-ota2-1':     'Guest Profile CRM',
+        'badge-ota2-2':     'Group Rooming',
+        'badge-ota2-3':     '30s Auto Refresh',
+        'tag-staff':        'Internal Operations · Staff Portal',
+        'desc-staff':       'Central operations system for Front Desk and Revenue Management. Booking tracking, room status oversight, and dynamic channel rate control.',
+        'badge-staff-1':    'Front Desk Ops',
+        'badge-staff-2':    'Rate Management',
+        'badge-staff-3':    'Daily Operations',
+        'label-pin':        'Staff Access Code:',
+        'info-db':          'Authoritative Database',
+        'info-api':         'Transaction Middleware',
+        'info-repo':        'Deployment Platform',
+        'footer-text':      'Lua Vang Resort & Spa · Central Reservation System (CRS) · 2026'
+      }
+    };
+
+    let currentHubLang = 'vi';
+
+    function applyHubLanguage(lang) {
+      currentHubLang = lang;
+      document.documentElement.lang = lang;
+      document.title = lang === 'en' 
+        ? 'Lua Vang Resort & Spa — CRS Operations Hub'
+        : 'Lụa Vàng Resort & Spa — Hệ Thống Điều Hành CRS';
+
+      document.querySelectorAll('.lang-opt').forEach(opt => {
+        opt.classList.toggle('active', opt.dataset.lang === lang);
+      });
+
+      const dict = I18N_HUB[lang] || I18N_HUB.vi;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (dict[key]) el.textContent = dict[key];
+      });
+
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.dataset.i18nHtml;
+        if (dict[key]) el.innerHTML = dict[key];
+      });
+
+      try { localStorage.setItem('hub-lang', lang); } catch {}
+    }
+
+    // Khởi tạo sự kiện chuyển ngữ
+    document.getElementById('lang-toggle')?.addEventListener('click', e => {
+      const opt = e.target.closest('.lang-opt');
+      if (opt && opt.dataset.lang !== currentHubLang) {
+        applyHubLanguage(opt.dataset.lang);
+      }
+    });
+
+    // Tự động nhận diện ngôn ngữ đã lưu hoặc mặc định VI
+    (function initHub() {
+      let saved = 'vi';
+      try {
+        saved = localStorage.getItem('hub-lang') || localStorage.getItem('staff-lang') || 'vi';
+      } catch {}
+      applyHubLanguage(saved);
+    })();
+  </script>
 </body>
 </html>
