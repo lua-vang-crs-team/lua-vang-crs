@@ -1,7 +1,6 @@
 /* ============================================================
    VIETSTAY — OTA PORTAL
    Channel: ota_1  |  Bilingual VI/EN
-   Phần 3: Đồng bộ giá phòng theo hệ số kênh OTA 1 (x 1.05)
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -9,9 +8,8 @@ const ANON_KEY       = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 const FN_BASE        = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE      = `${SUPABASE_URL}/rest/v1`;
 const SOURCE_CHANNEL = "ota_1";
-const CHANNEL_MULTIPLIER = 1.05; // Hệ số kênh OTA 1
+const CHANNEL_MULTIPLIER = 1.05;
 
-// Cache bảng giá theo kênh từ v_channel_rates
 let channelRatesCache = {};
 
 // ── I18N ─────────────────────────────────────────────────────
@@ -56,7 +54,6 @@ const I18N = {
     'msg-cancelling':  'Đang xử lý yêu cầu hủy…',
     'msg-404':         'Không tìm thấy mã đặt phòng. Vui lòng kiểm tra lại.',
     'msg-400':         'Mã đặt phòng này không thể hủy hoặc đã được hủy trước đó.',
-    'msg-wrong-channel':'Mã đặt phòng này thuộc kênh khác (không phải đặt qua VietStay). Quý khách vui lòng truy cập đúng kênh đã đặt để hủy!',
     'msg-cancel-err':  'Không thể hủy lúc này. Vui lòng liên hệ bộ phận hỗ trợ.',
     'inv-not-synced':  'Đang kết nối lại…',
     'msg-found-rooms': (n) => `Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
@@ -104,7 +101,6 @@ const I18N = {
     'msg-cancelling':  'Processing cancellation…',
     'msg-404':         'Booking ID not found. Please double-check.',
     'msg-400':         'This booking cannot be cancelled or is already cancelled.',
-    'msg-wrong-channel':'This reservation was booked via another channel. Please cancel via the original booking channel!',
     'msg-cancel-err':  'Unable to cancel. Please contact guest support.',
     'inv-not-synced':  'Reconnecting…',
     'msg-found-rooms': (n) => `Found <strong>${n}</strong> available room${n!==1?'s':''}.`,
@@ -118,7 +114,6 @@ let currentLang  = 'vi';
 let searchDates  = { check_in: null, check_out: null };
 let selectedRoom = null;
 
-// ── TRANSLATE ─────────────────────────────────────────────────
 function t(key, ...args) {
   const tbl = I18N[currentLang] || I18N.vi;
   const e   = (key in tbl) ? tbl[key] : (key in I18N.vi ? I18N.vi[key] : key);
@@ -146,7 +141,6 @@ function applyLanguage(lang) {
   try { localStorage.setItem('ota1-lang', lang); } catch {}
 }
 
-// ── API ───────────────────────────────────────────────────────
 async function callFn(name, body) {
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: 'POST',
@@ -165,7 +159,6 @@ async function restGet(path, params = '') {
   return res.json();
 }
 
-// ── TẢI BẢNG GIÁ THEO KÊNH TỪ V_CHANNEL_RATES ────────────────
 async function fetchChannelRates() {
   try {
     const rows = await restGet('v_channel_rates', `?channel=eq.${SOURCE_CHANNEL}`);
@@ -177,11 +170,10 @@ async function fetchChannelRates() {
       });
     }
   } catch (e) {
-    console.warn("Không lấy được bảng giá từ v_channel_rates, sẽ dùng hệ số x1.05:", e.message);
+    console.warn("Dùng hệ số x1.05 cho OTA 1:", e.message);
   }
 }
 
-// ── UI HELPERS ────────────────────────────────────────────────
 function showMsg(id, type, html) { const el=document.getElementById(id); if (el) { el.className=`msg ${type}`; el.innerHTML=html; } }
 function setBusy(btnId, busy) {
   const btn=document.getElementById(btnId); if (!btn) return;
@@ -191,17 +183,14 @@ function setBusy(btnId, busy) {
 }
 function vnd(n) { return Number(n).toLocaleString('vi-VN')+' ₫'; }
 
-// Hiển thị giá phòng đã nhân hệ số kênh OTA 1
 function getDisplayRate(room) {
   const pn = `/${t('unit-night')}`;
   const key = String(room.room_type || '').toLowerCase().trim();
 
-  // 1. Nếu có giá trong v_channel_rates
   if (channelRatesCache[key]) {
     return `${vnd(channelRatesCache[key])}${pn}`;
   }
 
-  // 2. Tính theo base rate (rate_low) x 1.05
   const base = Number(room.rate_low || room.base_rate || 0);
   if (base > 0) {
     const otaPrice = Math.round(base * CHANNEL_MULTIPLIER);
@@ -211,7 +200,6 @@ function getDisplayRate(room) {
   return t('contact');
 }
 
-// ── DATE INIT ─────────────────────────────────────────────────
 (function(){
   const today=new Date().toISOString().split('T')[0];
   const ci=document.getElementById('check-in'), co=document.getElementById('check-out');
@@ -220,7 +208,6 @@ function getDisplayRate(room) {
   ci.addEventListener('change',()=>{ co.min=ci.value; if(co.value&&co.value<=ci.value) co.value=''; });
 })();
 
-// ── LANG INIT ─────────────────────────────────────────────────
 (function(){
   document.getElementById('lang-toggle')?.addEventListener('click', e=>{
     const opt=e.target.closest('.lang-opt');
@@ -230,7 +217,6 @@ function getDisplayRate(room) {
   applyLanguage(saved);
 })();
 
-// ── INVENTORY ─────────────────────────────────────────────────
 async function loadInventory() {
   try {
     const rows = await restGet('channel_inventory',
@@ -267,7 +253,6 @@ async function loadInventory() {
   }
 }
 
-// ── SEARCH ────────────────────────────────────────────────────
 document.getElementById('search-btn')?.addEventListener('click', async ()=>{
   const ci=document.getElementById('check-in').value;
   const co=document.getElementById('check-out').value;
@@ -278,9 +263,7 @@ document.getElementById('search-btn')?.addEventListener('click', async ()=>{
   document.getElementById('rooms-container').innerHTML='';
   setBusy('search-btn',true); showMsg('search-status','loading',t('msg-searching'));
   try{
-    // Đảm bảo có bảng giá mới nhất từ CRS
     await fetchChannelRates();
-
     const{ok,data}=await callFn('check_availability',{check_in:ci,check_out:co,source_channel:SOURCE_CHANNEL});
     if(!ok){showMsg('search-status','error',data.error||t('msg-no-rooms'));return;}
     const rooms=data.available_rooms||[];
@@ -318,7 +301,6 @@ function pickRoom(room,listEl){
   document.getElementById('book-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── BOOK ──────────────────────────────────────────────────────
 document.getElementById('book-btn')?.addEventListener('click', async ()=>{
   const roomId     = (document.getElementById('selected-room').value || '').trim();
   const guestName  = (document.getElementById('guest-name').value    || '').trim();
@@ -392,46 +374,26 @@ function renderBookingPanel(bookingId,roomId,guestName,checkIn,checkOut){
   });
 }
 
-// ── CANCEL ────────────────────────────────────────────────────
+// ── CANCEL (GỬI CHUẨN SOURCE_CHANNEL: "ota_1") ────────────────
 document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
   const bookingId = (document.getElementById('booking-id-input').value || '').trim();
   if(!bookingId){ showMsg('cancel-status','warning',t('msg-no-bid')); return; }
+  if(!window.confirm(t('confirm-cancel', bookingId))) return;
   
   setBusy('cancel-btn', true);
   showMsg('cancel-status', 'loading', t('msg-cancelling'));
 
   try {
-    const bookings = await restGet('booking', `?booking_id=eq.${encodeURIComponent(bookingId)}&select=*`);
-    if (!bookings || bookings.length === 0) {
-      showMsg('cancel-status', 'error', t('msg-404'));
-      return;
-    }
-
-    const b = bookings[0];
-    let originalChannel = '';
-    for (const [key, val] of Object.entries(b)) {
-      if (/channel|source/i.test(key) && val) {
-        originalChannel = String(val).toLowerCase().trim();
-        break;
-      }
-    }
-
-    if (originalChannel && originalChannel !== SOURCE_CHANNEL && originalChannel !== 'vietstay') {
-      showMsg('cancel-status', 'error', t('msg-wrong-channel'));
-      return;
-    }
-
-    if(!window.confirm(t('confirm-cancel', bookingId))) return;
-
     const {ok, status, data} = await callFn('cancel_booking', {
       booking_id: bookingId,
       source_channel: SOURCE_CHANNEL,
       channel: SOURCE_CHANNEL
     });
 
-    if(status === 404) { showMsg('cancel-status','error',t('msg-404')); return; }
-    if(status === 400) { showMsg('cancel-status','warning',data.error || t('msg-400')); return; }
-    if(!ok)            { showMsg('cancel-status','error',data.error || t('msg-cancel-err')); return; }
+    if(status === 403) { showMsg('cancel-status','error', data.error || 'Đơn đặt phòng này thuộc kênh khác!'); return; }
+    if(status === 404) { showMsg('cancel-status','error', t('msg-404')); return; }
+    if(status === 400 || status === 409) { showMsg('cancel-status','warning', data.error || t('msg-400')); return; }
+    if(!ok)            { showMsg('cancel-status','error', data.error || t('msg-cancel-err')); return; }
 
     showMsg('cancel-status','success',t('msg-cancel-ok', bookingId));
     document.getElementById('booking-id-input').value = '';
@@ -443,7 +405,6 @@ document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
   }
 });
 
-// ── INIT & AUTO REFRESH ───────────────────────────────────────
 fetchChannelRates();
 loadInventory();
 setInterval(loadInventory, 30000);
