@@ -1,534 +1,391 @@
 /* ============================================================
-   LỤA VÀNG RESORT & SPA — STAFF PORTAL
+   LỤA VÀNG RESORT & SPA — STAFF PORTAL STYLES
    staff.css
    ============================================================ */
 
-/* ── PIN GATE OVERLAY ───────────────────────────────────────── */
+/* ── OVERLAY MÀN HÌNH NHẬP MÃ PIN ────────────────────────── */
 .pin-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
-  background: rgba(11, 45, 35, 0.96);
+  background: rgba(11, 45, 35, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
+  z-index: 99999;
+  padding: 1.5rem;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
-.pin-overlay.hidden { display: none; }
+
+.pin-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 
 .pin-card {
-  background: var(--white);
-  border-radius: 6px;
-  padding: 2.8rem 3rem 2.4rem;
-  width: 360px;
-  max-width: 92vw;
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #ddd8cf);
+  border-top: 4px solid var(--gold, #c9a94b);
+  border-radius: 4px;
+  width: 100%;
+  max-width: 360px;
+  padding: 2.2rem 2rem;
   text-align: center;
-  box-shadow: 0 16px 56px rgba(0,0,0,0.4);
-  border-top: 3px solid var(--gold);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
 }
-
-/* Shake animation for wrong PIN */
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  20%      { transform: translateX(-8px); }
-  40%      { transform: translateX(8px); }
-  60%      { transform: translateX(-6px); }
-  80%      { transform: translateX(6px); }
-}
-.pin-card.shake { animation: shake 0.38s ease; }
 
 .pin-logo {
-  font-family: var(--serif);
+  font-family: var(--serif, 'Cormorant Garamond', serif);
+  font-size: 2.2rem;
   font-weight: 300;
-  font-size: 2.4rem;
-  color: var(--forest);
-  letter-spacing: 0.05em;
+  color: var(--forest, #0b2d23);
   line-height: 1;
 }
 
 .pin-divider {
-  width: 2rem;
-  height: 1px;
-  background: var(--gold);
+  width: 36px;
+  height: 2px;
+  background: var(--gold, #c9a94b);
   margin: 0.9rem auto 0.7rem;
 }
 
 .pin-sub {
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  font-weight: 500;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 2rem;
+  letter-spacing: 0.14em;
+  color: var(--muted, #6b6158);
+  margin-bottom: 1.4rem;
 }
 
 .pin-field {
   margin-bottom: 1rem;
-  position: relative;
 }
 
 .pin-field input {
   width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 1rem;
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  font-size: 1.4rem;
   text-align: center;
-  letter-spacing: 0.5em;
-  font-size: 1.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--sans);
-  background: var(--ivory);
-  color: var(--ink);
-  transition: border-color 0.14s, box-shadow 0.14s;
+  letter-spacing: 0.35em;
+  border: 1px solid var(--border, #ddd8cf);
+  border-radius: var(--radius, 3px);
+  color: var(--forest, #0b2d23);
+  background: #faf8f5;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+
 .pin-field input:focus {
   outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2.5px rgba(201,169,75,0.16);
+  border-color: var(--gold, #c9a94b);
+  box-shadow: 0 0 0 3px rgba(201, 169, 75, 0.18);
+  background: #ffffff;
 }
 
 .pin-btn {
   width: 100%;
-  padding: 0.78rem 1rem;
-  background: var(--forest);
-  color: var(--white);
-  font-size: 0.88rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  border-radius: var(--radius);
+  padding: 0.7rem 1.2rem;
+  background: var(--forest, #0b2d23);
+  color: #ffffff;
   border: none;
+  border-radius: var(--radius, 3px);
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.13s;
+  transition: background 0.14s;
 }
-.pin-btn:hover { background: var(--forest-mid); }
+
+.pin-btn:hover {
+  background: var(--forest-mid, #163e30);
+}
 
 .pin-hint {
-  margin-top: 1rem;
-  font-size: 0.68rem;
-  color: var(--muted);
+  margin-top: 1.2rem;
+  font-size: 0.72rem;
+  color: var(--muted, #6b6158);
+  line-height: 1.4;
 }
 
-/* ── HEADER: ACTIONS (LANG TOGGLE + LOGOUT) ─────────────────── */
+/* Hiệu ứng rung khi sai mật mã */
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+.pin-card.shake {
+  animation: pinShake 0.4s ease-in-out;
+}
+
+/* ── HEADER ACTIONS & LOGOUT ───────────────────────────────── */
 .header-actions {
   position: absolute;
   top: 1.1rem;
   right: 1.4rem;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.8rem;
 }
 
 .logout-btn {
-  padding: 0.26rem 0.75rem;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.22);
-  color: rgba(255,255,255,0.65);
-  font-family: var(--sans);
-  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--sans, sans-serif);
+  font-size: 0.7rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  padding: 0.32rem 0.75rem;
   border-radius: 999px;
   cursor: pointer;
-  transition: background 0.13s, color 0.13s;
+  transition: background 0.14s, color 0.14s;
 }
-.logout-btn:hover { background: rgba(255,255,255,0.16); color: rgba(255,255,255,0.9); }
 
-/* ── STAFF DASHBOARD: STATS ROW ─────────────────────────────── */
+.logout-btn:hover {
+  background: rgba(208, 128, 128, 0.25);
+  border-color: #d08080;
+  color: #ffffff;
+}
+
+/* ── DASHBOARD STATS (Khắc phục font chữ O, I thành số chuẩn) ─ */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--gold);
-  border-radius: 0 0 var(--radius) var(--radius);
-  padding: 1.15rem 1.4rem 1.1rem;
-  box-shadow: var(--shadow);
+  background: var(--white, #ffffff);
+  border: 1px solid var(--border, #ddd8cf);
+  border-radius: var(--radius, 3px);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  box-shadow: var(--shadow, 0 1px 4px rgba(0,0,0,0.07));
 }
 
 .stat-num {
-  font-family: var(--serif);
-  font-weight: 300;
-  font-size: 2.8rem;
-  color: var(--forest);
-  line-height: 1;
-  letter-spacing: -0.01em;
+  font-family: var(--sans, 'DM Sans', -apple-system, sans-serif) !important;
+  font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  font-size: 2.2rem;
+  font-weight: 500;
+  color: var(--forest, #0b2d23);
+  line-height: 1.1;
 }
 
 .stat-label {
   font-size: 0.68rem;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--muted, #6b6158);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   margin-top: 0.45rem;
 }
 
-/* ── TABS ────────────────────────────────────────────────────── */
+/* ── TABS ──────────────────────────────────────────────────── */
 .tabs {
   display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--border);
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border, #ddd8cf);
+  margin-bottom: 1.6rem;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
-.tabs::-webkit-scrollbar { display: none; }
 
 .tab-btn {
-  flex-shrink: 0;
-  padding: 0.72rem 1.2rem;
-  background: none;
+  padding: 0.65rem 1.1rem;
+  background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  font-family: var(--sans);
-  font-size: 0.82rem;
+  font-family: var(--sans, sans-serif);
+  font-size: 0.86rem;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--muted, #6b6158);
   cursor: pointer;
-  transition: color 0.14s, border-color 0.14s;
-  letter-spacing: 0.02em;
   white-space: nowrap;
+  transition: color 0.14s, border-color 0.14s;
 }
-.tab-btn:hover:not(.active) { color: var(--forest); }
+
+.tab-btn:hover {
+  color: var(--forest, #0b2d23);
+}
+
 .tab-btn.active {
-  color: var(--forest);
-  border-bottom-color: var(--gold);
+  color: var(--forest, #0b2d23);
+  border-bottom-color: var(--gold, #c9a94b);
 }
 
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel {
+  display: none;
+}
 
-/* ── BOOKING SEARCH ROW ─────────────────────────────────────── */
+.tab-panel.active {
+  display: block;
+}
+
+/* ── BOOKING MANAGEMENT TABLE ──────────────────────────────── */
 .search-row {
   display: flex;
-  gap: 0.65rem;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
   flex-wrap: wrap;
-  align-items: flex-end;
-  margin-bottom: 1.3rem;
 }
 
-.search-row input,
+.search-row input[type="text"] {
+  flex: 2;
+  min-width: 180px;
+}
+
+.search-row input[type="date"],
 .search-row select {
-  padding: 0.58rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--sans);
-  font-size: 0.88rem;
-  color: var(--ink);
-  background: var(--white);
-  transition: border-color 0.14s;
+  flex: 1;
+  min-width: 130px;
 }
-.search-row input:focus,
-.search-row select:focus {
-  outline: none;
-  border-color: var(--gold);
-}
-
-.search-row input[id="search-name"] { flex: 2 1 200px; }
-.search-row input[type="date"]      { flex: 1 1 140px; }
-.search-row select                  { flex: 1 1 160px; }
 
 .select-input {
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 2rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B6158' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  cursor: pointer;
+  padding: 0.58rem 0.85rem;
+  border: 1px solid var(--border, #ddd8cf);
+  border-radius: var(--radius, 3px);
+  font-family: var(--sans, sans-serif);
+  font-size: 0.9rem;
+  color: var(--ink, #1e1a17);
+  background: #ffffff;
 }
 
-/* ── BOOKINGS TABLE ─────────────────────────────────────────── */
 .bookings-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border, #ddd8cf);
+  border-radius: var(--radius, 3px);
+  background: #ffffff;
 }
 
 .bookings-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.83rem;
-  min-width: 680px;
-}
-
-.bookings-table thead {
-  background: var(--forest);
+  font-size: 0.82rem;
+  text-align: left;
 }
 
 .bookings-table th {
-  padding: 0.65rem 1rem;
-  text-align: left;
-  font-family: var(--sans);
+  background: #faf8f5;
+  color: var(--muted, #6b6158);
   font-weight: 500;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.82);
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--border, #ddd8cf);
   white-space: nowrap;
 }
 
 .bookings-table td {
-  padding: 0.62rem 1rem;
-  border-bottom: 1px solid var(--border-soft);
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--border-soft, #ede9e2);
   vertical-align: middle;
-  color: var(--ink);
 }
 
-.bookings-table tbody tr:last-child td { border-bottom: none; }
-.bookings-table tbody tr:hover { background: #FAFAF5; }
+.bookings-table tr:last-child td {
+  border-bottom: none;
+}
 
-/* booking ID monospace */
-.bookings-table td.col-id {
-  font-family: 'Courier New', monospace;
+.bookings-table .col-id {
+  font-family: monospace;
   font-size: 0.78rem;
-  color: var(--muted);
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--forest, #0b2d23);
 }
 
-/* ── STATUS BADGES ──────────────────────────────────────────── */
 .status-badge {
   display: inline-block;
-  padding: 0.18rem 0.58rem;
-  border-radius: 2px;
-  font-size: 0.67rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.badge-confirmed    { background: #EAF4EE; color: #1A5832; }
-.badge-checked-in   { background: #E8EFF8; color: #0F2B5B; }
-.badge-checked-out  { background: #F0F0F0; color: #555; }
-.badge-cancelled    { background: #FCECEA; color: #8B1A10; }
-
-/* ── TABLE ACTION BUTTONS ───────────────────────────────────── */
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.24rem 0.62rem;
-  font-family: var(--sans);
-  font-size: 0.71rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
   font-weight: 500;
-  border-radius: var(--radius);
-  border: 1px solid;
+  letter-spacing: 0.02em;
+}
+
+.badge-confirmed { background: #eaf4ee; color: #1a5832; }
+.badge-checked-in { background: #edf2fa; color: #1a3a72; }
+.badge-checked-out { background: #f2efe8; color: #6b6158; }
+.badge-cancelled { background: #fcecea; color: #8b1a10; }
+
+.action-btn {
+  padding: 0.24rem 0.65rem;
+  background: transparent;
+  border: 1px solid var(--border, #ddd8cf);
+  border-radius: var(--radius, 3px);
+  font-family: var(--sans, sans-serif);
+  font-size: 0.74rem;
   cursor: pointer;
-  transition: background 0.12s;
-  white-space: nowrap;
-  margin: 0.1rem 0.15rem 0.1rem 0;
-  line-height: 1.4;
+  color: var(--ink, #1e1a17);
+  transition: all 0.12s;
 }
 
-.checkin-btn {
-  border-color: #2471A3;
-  color: #2471A3;
-  background: transparent;
+.action-btn:hover {
+  background: #faf8f5;
+  border-color: var(--gold, #c9a94b);
 }
-.checkin-btn:hover { background: #E8F0F8; }
-
-.checkout-btn {
-  border-color: #1A5832;
-  color: #1A5832;
-  background: transparent;
-}
-.checkout-btn:hover { background: #EAF4EE; }
 
 .cancel-bk-btn {
-  border-color: #8B1A10;
-  color: #8B1A10;
-  background: transparent;
-}
-.cancel-bk-btn:hover { background: #FCECEA; }
-
-/* ── EMPTY STATES & NOTES ───────────────────────────────────── */
-.no-results {
-  padding: 2rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--muted);
-  font-style: italic;
+  border-color: #d08080;
+  color: #8b1a10;
 }
 
-.endpoint-note {
-  padding: 0.75rem 1rem;
-  background: var(--warn-bg);
-  color: var(--warn-fg);
-  border-radius: var(--radius);
-  font-size: 0.82rem;
-  border-left: 3px solid #E6A817;
-  margin-top: 0.5rem;
-  line-height: 1.5;
-}
-.endpoint-note code {
-  font-family: 'Courier New', monospace;
-  background: rgba(0,0,0,0.06);
-  padding: 0.1rem 0.35rem;
-  border-radius: 2px;
+.cancel-bk-btn:hover {
+  background: #fcecea;
 }
 
-/* ── NEW BOOKING FORM ───────────────────────────────────────── */
-.nb-form {
-  margin-top: 1.6rem;
-  padding-top: 1.4rem;
-  border-top: 1px solid var(--border-soft);
-}
-.nb-form.hidden { display: none; }
-
-/* ── RATE MANAGEMENT (4.2) ───────────────────────────────────── */
+/* ── STAFF RATE MANAGEMENT ─────────────────────────────────── */
 .rate-form-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
-  margin-bottom: 1.1rem;
+  margin-bottom: 1rem;
 }
-
-.rate-select {
-  width: 100%;
-  padding: 0.6rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--sans);
-  font-size: 0.9rem;
-  color: var(--ink);
-  background: var(--white);
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 2rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B6158' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  cursor: pointer;
-  transition: border-color 0.14s;
-}
-.rate-select:focus { outline: none; border-color: var(--gold); }
-
-.rate-channels-section { margin-top: 1.2rem; }
-.rate-history-section  { margin-top: 2.2rem; }
 
 .rate-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.9rem;
-  margin-top: 0.9rem;
+  margin-top: 0.85rem;
 }
 
 .rate-card {
-  background: var(--ivory);
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--gold);
-  border-radius: var(--radius);
-  padding: 1.1rem 1rem 0.9rem;
+  background: #faf8f5;
+  border: 1px solid var(--border, #ddd8cf);
+  border-top: 3px solid var(--gold, #c9a94b);
+  border-radius: var(--radius, 3px);
+  padding: 1.1rem 0.85rem;
   text-align: center;
 }
 
 .rate-card .rc-channel {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  color: var(--forest);
+  color: var(--forest, #0b2d23);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .rate-card .rc-mult {
   font-size: 0.68rem;
-  color: var(--muted);
-  margin-top: 0.22rem;
+  color: var(--muted, #6b6158);
+  margin-top: 0.25rem;
 }
 
 .rate-card .rc-price {
-  font-family: var(--serif);
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: var(--forest);
-  margin-top: 0.5rem;
-  line-height: 1;
+  font-family: var(--sans, sans-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--forest, #0b2d23);
+  margin-top: 0.45rem;
 }
 
-/* Refresh button (reuse action-btn style) */
-#refresh-history-btn {
-  border-color: var(--gold-dim);
-  color: var(--gold-dim);
-  background: transparent;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.76rem;
-}
-#refresh-history-btn:hover { background: var(--gold-pale); }
-
-.rate-history-section > div:first-child {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
+.no-results {
+  padding: 1.4rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted, #6b6158);
+  font-style: italic;
 }
 
-/* ── MISC INPUT OVERRIDE (number type) ─────────────────────── */
-input[type="number"] {
-  width: 100%;
-  padding: 0.58rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--sans);
-  font-size: 0.9rem;
-  color: var(--ink);
-  background: var(--white);
-  transition: border-color 0.14s;
-  appearance: textfield;
-}
-input[type="number"]:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2.5px rgba(201,169,75,0.16);
-}
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button { opacity: 0.4; }
-
-input[type="email"], input[type="tel"] {
-  width: 100%;
-  padding: 0.58rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--sans);
-  font-size: 0.9rem;
-  color: var(--ink);
-  background: var(--white);
-  transition: border-color 0.14s;
-}
-input[type="email"]:focus, input[type="tel"]:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 0 2.5px rgba(201,169,75,0.16);
-}
-
-/* ── RESPONSIVE ─────────────────────────────────────────────── */
-@media (max-width: 860px) {
-  .stats-row        { grid-template-columns: repeat(2, 1fr); }
-  .rate-cards-grid  { grid-template-columns: repeat(2, 1fr); }
-  .rate-form-grid   { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 540px) {
-  .stats-row     { gap: 0.6rem; }
-  .stat-num      { font-size: 2.2rem; }
-  .tab-btn       { font-size: 0.76rem; padding: 0.6rem 0.85rem; }
-  .pin-card      { padding: 2rem 1.6rem 1.8rem; }
-  .pin-logo      { font-size: 1.9rem; }
-
-  .header-actions { top: 0.7rem; right: 0.8rem; gap: 0.4rem; }
-  .logout-btn     { font-size: 0.62rem; padding: 0.22rem 0.6rem; }
-
-  .search-row input[id="search-name"],
-  .search-row input[type="date"],
-  .search-row select { flex: 1 1 100%; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pin-card.shake { animation: none; }
+@media (max-width: 768px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .rate-form-grid { grid-template-columns: 1fr; }
+  .rate-cards-grid { grid-template-columns: repeat(2, 1fr); }
 }
