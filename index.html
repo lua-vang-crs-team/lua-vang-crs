@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đặt Phòng — Lụa Vàng Resort &amp; Spa</title>
+  <title>Đặt Phòng Trực Tuyến — Lụa Vàng Resort &amp; Spa</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
   <header>
     <div class="header-inner">
       <div class="hotel-name">Lụa Vàng</div>
-      <div class="hotel-sub" data-i18n-html="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Hệ thống đặt phòng</div>
+      <div class="hotel-sub" data-i18n-html="hotel-sub">Resort &amp; Spa &ensp;·&ensp; Cổng Đặt Phòng Trực Tiếp</div>
     </div>
     <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language / Ngôn ngữ">
       <span class="lang-opt active" data-lang="vi">VI</span>
@@ -24,8 +24,7 @@
   </header>
 
   <main>
-
-    <!-- ═══ STEP 1: SEARCH ═══ -->
+    <!-- BƯỚC 1: TÌM PHÒNG -->
     <section class="step" id="search-section">
       <div class="step-tag" data-i18n="step1-tag">Bước 1</div>
       <h2 data-i18n="step1-h2">Tìm phòng trống</h2>
@@ -47,35 +46,34 @@
       <div id="rooms-container"></div>
     </section>
 
-    <!-- ═══ STEP 2: BOOK ═══ -->
+    <!-- BƯỚC 2: XÁC NHẬN ĐẶT PHÒNG -->
     <section class="step" id="book-section">
       <div class="step-tag" data-i18n="step2-tag">Bước 2</div>
-      <h2 data-i18n="step2-h2">Xác nhận đặt phòng</h2>
+      <h2 data-i18n="step2-h2">Xác nhận thông tin đặt phòng</h2>
 
       <div class="field">
-        <label for="selected-room" data-i18n="label-room">Mã phòng đã chọn</label>
+        <label for="selected-room" data-i18n="label-room">Phòng đã chọn</label>
         <input type="text" id="selected-room"
-               placeholder="Chọn phòng từ kết quả bên trên"
+               placeholder="Chọn phòng từ danh sách bên trên"
                data-i18n-placeholder="ph-room" readonly>
       </div>
 
       <div class="field">
-        <label for="guest-name" data-i18n="label-guest">Tên khách lưu trú</label>
+        <label for="guest-name" data-i18n="label-guest">Họ và tên khách lưu trú</label>
         <input type="text" id="guest-name"
-               placeholder="Họ và tên đầy đủ"
+               placeholder="Nguyễn Văn A"
                data-i18n-placeholder="ph-guest">
       </div>
 
-      <!-- ── FIX: email + phone required by 4.3 Guest Normalisation ── -->
       <div class="date-row">
         <div class="field">
-          <label for="guest-email" data-i18n="label-email">Email khách <span style="color:var(--gold-dim);font-weight:600" data-i18n="label-email-note">(hoặc nhập SĐT)</span></label>
+          <label for="guest-email" data-i18n="label-email">Địa chỉ Email <span style="color:var(--gold-dim);font-weight:500" data-i18n="label-email-note">(để nhận phiếu xác nhận)</span></label>
           <input type="email" id="guest-email"
-                 placeholder="example@email.com"
+                 placeholder="guest@domain.com"
                  data-i18n-placeholder="ph-email">
         </div>
         <div class="field">
-          <label for="guest-phone" data-i18n="label-phone">Số điện thoại</label>
+          <label for="guest-phone" data-i18n="label-phone">Số điện thoại liên hệ</label>
           <input type="tel" id="guest-phone"
                  placeholder="0901 234 567"
                  data-i18n-placeholder="ph-phone">
@@ -84,30 +82,28 @@
 
       <button class="btn btn-primary" id="book-btn" data-i18n="btn-book">Xác nhận đặt phòng</button>
       <div id="book-status" class="msg hidden"></div>
-
       <div id="booking-result" class="booking-panel hidden"></div>
     </section>
 
-    <!-- ═══ STEP 3: CANCEL ═══ -->
+    <!-- BƯỚC 3: HỦY ĐẶT PHÒNG -->
     <section class="step" id="cancel-section">
-      <div class="step-tag" data-i18n="cancel-tag">Hủy đặt phòng</div>
-      <h2 data-i18n="cancel-h2">Nhập mã để hủy</h2>
+      <div class="step-tag" data-i18n="cancel-tag">Quản lý đặt phòng</div>
+      <h2 data-i18n="cancel-h2">Tra cứu và hủy mã đặt phòng</h2>
 
       <div class="field">
         <label for="booking-id-input" data-i18n="label-bid">Mã đặt phòng (Booking ID)</label>
         <input type="text" id="booking-id-input"
-               placeholder="Dán mã đặt phòng vào đây…"
+               placeholder="Nhập mã đặt phòng vào đây…"
                data-i18n-placeholder="ph-bid">
       </div>
 
       <button class="btn btn-cancel" id="cancel-btn" data-i18n="btn-cancel">Hủy đặt phòng</button>
       <div id="cancel-status" class="msg hidden"></div>
     </section>
-
   </main>
 
   <footer>
-    <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa &ensp;·&ensp; Hệ thống quản lý đặt phòng &ensp;·&ensp; 2026</p>
+    <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa · Cổng đặt phòng trực tuyến chính thức · 2026</p>
   </footer>
 
   <script src="app.js"></script>
