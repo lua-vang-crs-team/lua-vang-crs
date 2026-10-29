@@ -1,6 +1,7 @@
 /* ============================================================
    VIETSTAY — OTA PORTAL
    Channel: ota_1  |  Bilingual VI/EN
+   Phần 3: Đồng bộ giá phòng theo hệ số kênh OTA 1 (x 1.05)
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -8,6 +9,10 @@ const ANON_KEY       = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 const FN_BASE        = `${SUPABASE_URL}/functions/v1`;
 const REST_BASE      = `${SUPABASE_URL}/rest/v1`;
 const SOURCE_CHANNEL = "ota_1";
+const CHANNEL_MULTIPLIER = 1.05; // Hệ số kênh OTA 1
+
+// Cache bảng giá theo kênh từ v_channel_rates
+let channelRatesCache = {};
 
 // ── I18N ─────────────────────────────────────────────────────
 const I18N = {
@@ -160,6 +165,22 @@ async function restGet(path, params = '') {
   return res.json();
 }
 
+// ── TẢI BẢNG GIÁ THEO KÊNH TỪ V_CHANNEL_RATES ────────────────
+async function fetchChannelRates() {
+  try {
+    const rows = await restGet('v_channel_rates', `?channel=eq.${SOURCE_CHANNEL}`);
+    if (rows && rows.length > 0) {
+      rows.forEach(r => {
+        const key = String(r.room_type || '').toLowerCase().trim();
+        const price = Number(r.computed_rate ?? r.rate ?? r.channel_rate ?? 0);
+        if (price > 0) channelRatesCache[key] = price;
+      });
+    }
+  } catch (e) {
+    console.warn("Không lấy được bảng giá từ v_channel_rates, sẽ dùng hệ số x1.05:", e.message);
+  }
+}
+
 // ── UI HELPERS ────────────────────────────────────────────────
 function showMsg(id, type, html) { const el=document.getElementById(id); if (el) { el.className=`msg ${type}`; el.innerHTML=html; } }
 function setBusy(btnId, busy) {
@@ -169,10 +190,24 @@ function setBusy(btnId, busy) {
   else{btn.textContent=btn.dataset.orig||btn.textContent;}
 }
 function vnd(n) { return Number(n).toLocaleString('vi-VN')+' ₫'; }
-function rateStr(low,high) {
-  const pn=`/${t('unit-night')}`;
-  if(low&&high&&String(low)!==String(high)) return `${vnd(low)} – ${vnd(high)}${pn}`;
-  if(low) return `${vnd(low)}${pn}`;
+
+// Hiển thị giá phòng đã nhân hệ số kênh OTA 1
+function getDisplayRate(room) {
+  const pn = `/${t('unit-night')}`;
+  const key = String(room.room_type || '').toLowerCase().trim();
+
+  // 1. Nếu có giá trong v_channel_rates
+  if (channelRatesCache[key]) {
+    return `${vnd(channelRatesCache[key])}${pn}`;
+  }
+
+  // 2. Tính theo base rate (rate_low) x 1.05
+  const base = Number(room.rate_low || room.base_rate || 0);
+  if (base > 0) {
+    const otaPrice = Math.round(base * CHANNEL_MULTIPLIER);
+    return `${vnd(otaPrice)}${pn}`;
+  }
+
   return t('contact');
 }
 
@@ -243,6 +278,9 @@ document.getElementById('search-btn')?.addEventListener('click', async ()=>{
   document.getElementById('rooms-container').innerHTML='';
   setBusy('search-btn',true); showMsg('search-status','loading',t('msg-searching'));
   try{
+    // Đảm bảo có bảng giá mới nhất từ CRS
+    await fetchChannelRates();
+
     const{ok,data}=await callFn('check_availability',{check_in:ci,check_out:co,source_channel:SOURCE_CHANNEL});
     if(!ok){showMsg('search-status','error',data.error||t('msg-no-rooms'));return;}
     const rooms=data.available_rooms||[];
@@ -262,7 +300,7 @@ function renderRooms(rooms){
       <h4>${room.room_type} &mdash; <span style="font-family:var(--sans);font-size:.85rem">${room.room_id}</span></h4>
       <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} ${t('unit-guests')}</div>
     </div>
-    <div class="room-rate">${rateStr(room.rate_low,room.rate_high)}</div>
+    <div class="room-rate">${getDisplayRate(room)}</div>
     <button class="btn-select" data-id="${room.room_id}">${t('btn-pick')}</button>`;
     list.appendChild(row);
   });
@@ -354,7 +392,7 @@ function renderBookingPanel(bookingId,roomId,guestName,checkIn,checkOut){
   });
 }
 
-// ── CANCEL (Kiểm tra đúng kênh VietStay trước khi hủy) ────────
+// ── CANCEL ────────────────────────────────────────────────────
 document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
   const bookingId = (document.getElementById('booking-id-input').value || '').trim();
   if(!bookingId){ showMsg('cancel-status','warning',t('msg-no-bid')); return; }
@@ -363,7 +401,6 @@ document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
   showMsg('cancel-status', 'loading', t('msg-cancelling'));
 
   try {
-    // 1. KIỂM TRA ĐƠN ĐẶT PHÒNG CÓ THUỘC KÊNH OTA_1 KHÔNG
     const bookings = await restGet('booking', `?booking_id=eq.${encodeURIComponent(bookingId)}&select=*`);
     if (!bookings || bookings.length === 0) {
       showMsg('cancel-status', 'error', t('msg-404'));
@@ -379,13 +416,11 @@ document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
       }
     }
 
-    // Nếu đơn thuộc kênh khác (ota_2 hoặc direct) -> Chặn ngay lập tức
     if (originalChannel && originalChannel !== SOURCE_CHANNEL && originalChannel !== 'vietstay') {
       showMsg('cancel-status', 'error', t('msg-wrong-channel'));
       return;
     }
 
-    // 2. XÁC NHẬN VÀ TIẾN HÀNH HỦY
     if(!window.confirm(t('confirm-cancel', bookingId))) return;
 
     const {ok, status, data} = await callFn('cancel_booking', {
@@ -409,5 +444,6 @@ document.getElementById('cancel-btn')?.addEventListener('click', async ()=>{
 });
 
 // ── INIT & AUTO REFRESH ───────────────────────────────────────
+fetchChannelRates();
 loadInventory();
 setInterval(loadInventory, 30000);
