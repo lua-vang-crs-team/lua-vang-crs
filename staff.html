@@ -6,9 +6,9 @@
   <title>Cổng nhân viên — Lụa Vàng Resort & Spa</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="staff.css">
+  <link rel="stylesheet" href="staff.css?v=2026_fixed">
 </head>
 <body>
 
@@ -196,7 +196,7 @@
       </div>
     </div>
 
-    <!-- ═══════ TAB 4: QUẢN TRỊ BẢNG GIÁ VÀ DOANH THU ═══════ -->
+    <!-- ═══════ TAB 4: QUẢN TRỊ BẢNG GIÁ ═══════ -->
     <div class="tab-panel" id="tab-rates">
       <div class="step">
         <div class="step-tag" data-i18n="rate-tag">Quản trị giá bán &amp; Kênh phân phối</div>
@@ -229,7 +229,7 @@
                 data-i18n="btn-update-rate">Lưu thay đổi giá</button>
         <div id="rate-status" class="msg hidden"></div>
 
-        <!-- THẺ GIÁ TỰ ĐỘNG PHÂN PHỐI THEO KÊNH -->
+        <!-- THẺ GIÁ PHÂN PHỐI THEO KÊNH -->
         <div class="rate-channels-section">
           <div class="step-tag" style="margin-top:1.8rem;margin-bottom:0"
                data-i18n="rate-preview-tag">Bảng giá phân phối tự động theo chính sách kênh</div>
@@ -278,6 +278,7 @@
     <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa · Hệ thống quản lý phòng &amp; vận hành tập trung · 2026</p>
   </footer>
 
-  <script src="staff.js"></script>
+  <!-- Thêm ?v=2026_fixed để xóa sạch cache của trình duyệt -->
+  <script src="staff.js?v=2026_fixed"></script>
 </body>
 </html>
