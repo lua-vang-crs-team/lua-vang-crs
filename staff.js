@@ -34,7 +34,7 @@ const I18N = {
     'tab-new-booking':   'Tạo đặt phòng mới',
     'tab-availability':  'Kiểm tra phòng',
     'tab-rates':         'Quản lý bảng giá',
-    'ph-search':         'Tên khách lưu trú / Mã đặt phòng…',
+    'ph-search':         'Tên khách / Mã đặt phòng / Kênh…',
     'opt-all-status':    'Tất cả trạng thái',
     'opt-confirmed':     'Đã xác nhận',
     'opt-checked-in':    'Đang lưu trú',
@@ -112,7 +112,7 @@ const I18N = {
     'tab-new-booking':   'New Reservation',
     'tab-availability':  'Room Availability',
     'tab-rates':         'Rate Management',
-    'ph-search':         'Guest name / Booking ID…',
+    'ph-search':         'Guest name / Booking ID / Channel…',
     'opt-all-status':    'All Statuses',
     'opt-confirmed':     'Confirmed',
     'opt-checked-in':    'Checked-in',
@@ -254,6 +254,18 @@ function getStatusBadge(status) {
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
 
+// Render Badge cho Kênh Đặt Phòng chuẩn xác
+function getChannelBadge(ch) {
+  const c = String(ch || '').toLowerCase().trim();
+  if (c === 'ota_1' || c.includes('vietstay')) {
+    return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#FEF0E6;color:#E07B39;border:1px solid rgba(224,123,57,0.3)">OTA 1 · VietStay</span>`;
+  }
+  if (c === 'ota_2' || c.includes('stayasia')) {
+    return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#E8F8EE;color:#27AE60;border:1px solid rgba(39,174,96,0.3)">OTA 2 · StayAsia</span>`;
+  }
+  return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#F5EDD5;color:#8A7035;border:1px solid rgba(201,169,75,0.3)">Direct Web</span>`;
+}
+
 // ── LANGUAGE ───────────────────────────────────────────────────
 function applyLanguage(lang) {
   currentLang = lang;
@@ -369,7 +381,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
+// ── TAB 1: QUẢN LÝ BOOKING (Nhận diện chính xác 100% Kênh Đặt) ──
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -390,15 +402,20 @@ async function searchBookings() {
     const raw = await restGet('booking', `?select=*&order=check_in.desc&limit=100${filterQuery}`);
     
     rows = (raw || []).map(b => {
+      // 1. Quét tìm tên khách
       const guestName = b.guest_name 
                      || b.guest?.guest_name 
                      || b.guest_id 
                      || 'Khách lưu trú';
       
-      const channel = b.source_channel 
-                   || b.channel 
-                   || b.source 
-                   || 'direct';
+      // 2. Quét tìm kênh đặt thực tế từ DB
+      let detectedChannel = 'direct';
+      for (const [key, val] of Object.entries(b)) {
+        if (/channel|source/i.test(key) && val) {
+          detectedChannel = String(val).toLowerCase().trim();
+          break;
+        }
+      }
 
       return {
         booking_id:     b.booking_id || b.id || '—',
@@ -407,7 +424,8 @@ async function searchBookings() {
         check_in:       b.check_in || '—',
         check_out:      b.check_out || '—',
         status:         b.status || 'confirmed',
-        source_channel: channel
+        source_channel: detectedChannel,
+        raw_data:       b
       };
     });
 
@@ -416,12 +434,14 @@ async function searchBookings() {
     return;
   }
 
+  // Lọc theo từ khóa tìm kiếm phía client
   if (name) {
     const q = name.toLowerCase();
     rows = rows.filter(b =>
       String(b.guest_name || '').toLowerCase().includes(q) ||
       String(b.booking_id || '').toLowerCase().includes(q) ||
-      String(b.room_id    || '').toLowerCase().includes(q)
+      String(b.room_id    || '').toLowerCase().includes(q) ||
+      String(b.source_channel || '').toLowerCase().includes(q)
     );
   }
 
@@ -462,7 +482,7 @@ function renderBookingsTable(rows) {
       <td>${b.guest_name}</td>
       <td>${b.check_in}</td>
       <td>${b.check_out}</td>
-      <td style="font-size:0.74rem;color:var(--muted)">${b.source_channel}</td>
+      <td>${getChannelBadge(b.source_channel)}</td>
       <td>${getStatusBadge(b.status)}</td>
       <td>${b.status === 'confirmed'
         ? `<button class="action-btn cancel-bk-btn" data-id="${b.booking_id}">Hủy</button>`
