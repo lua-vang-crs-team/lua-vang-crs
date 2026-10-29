@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VietStay — Đặt phòng trực tuyến</title>
+  <title>VietStay — Đặt phòng khách sạn trực tuyến</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -37,6 +37,15 @@
     .ota-badge { display:inline-block; margin-top:.5rem; padding:.2rem .65rem; background:var(--gold); color:#fff;
                  font-family:var(--sans); font-size:.59rem; font-weight:600; letter-spacing:.14em;
                  text-transform:uppercase; border-radius:2px; }
+    .field-note { font-size:0.72rem; color:var(--gold-dim); font-weight:500; }
+    input[type="email"], input[type="tel"] {
+      width: 100%; padding: 0.58rem 0.85rem; border: 1px solid var(--border);
+      border-radius: var(--radius); font-family: var(--sans); font-size: 0.9rem;
+      color: var(--ink); background: var(--white); transition: border-color .14s;
+    }
+    input[type="email"]:focus, input[type="tel"]:focus {
+      outline: none; border-color: var(--gold); box-shadow: 0 0 0 2.5px rgba(224,123,57,0.16);
+    }
     main { gap:1.6rem; }
     @media(max-width:700px){ .inv-grid{grid-template-columns:repeat(3,1fr);} }
     @media(max-width:400px){ .inv-grid{grid-template-columns:repeat(2,1fr);} }
@@ -46,10 +55,9 @@
   <header>
     <div class="header-inner">
       <div class="hotel-name">VietStay</div>
-      <div class="hotel-sub" data-i18n-html="hotel-sub">Kênh đặt phòng trực tuyến &ensp;·&ensp; OTA Channel 1</div>
-      <div><span class="ota-badge">Powered by Lụa Vàng CRS</span></div>
+      <div class="hotel-sub" data-i18n-html="hotel-sub">Kênh đặt phòng khách sạn trực tuyến</div>
+      <div><span class="ota-badge">Đối tác phân phối chính thức</span></div>
     </div>
-    <!-- Language toggle -->
     <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language / Ngôn ngữ">
       <span class="lang-opt active" data-lang="vi">VI</span>
       <span class="lang-sep">|</span>
@@ -58,14 +66,14 @@
   </header>
 
   <main>
-    <!-- INVENTORY -->
+    <!-- TÌNH TRẠNG PHÒNG TRỰC TUYẾN -->
     <section class="ota-panel" id="inventory-section">
       <div class="ota-panel-header">
         <div>
-          <div class="step-tag" data-i18n="inv-tag" style="margin-bottom:.3rem">Tình trạng phòng</div>
+          <div class="step-tag" data-i18n="inv-tag" style="margin-bottom:.3rem">Tình trạng phòng thực tế</div>
           <div class="ota-panel-title" data-i18n-html="inv-title">Lụa Vàng Resort &amp; Spa</div>
         </div>
-        <div class="ota-sync-badge live" id="inv-updated">Đang tải…</div>
+        <div class="ota-sync-badge live" id="inv-updated">Đang cập nhật…</div>
       </div>
       <div class="inv-grid" id="inv-grid">
         <div class="inv-card"><div class="inv-type">Deluxe Ocean View</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
@@ -73,12 +81,12 @@
         <div class="inv-card"><div class="inv-type">Suite Lagoon View</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
         <div class="inv-card"><div class="inv-type">Lantern Pool Villa</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
         <div class="inv-card"><div class="inv-type">Oceanfront Villa</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
-        <div class="inv-card"><div class="inv-type">Presidential</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
+        <div class="inv-card"><div class="inv-type">Presidential Silk Villa</div><div class="inv-count">—</div><div class="inv-sub" data-i18n="inv-sub">phòng còn</div></div>
       </div>
-      <div class="ota-footer-note" data-i18n="inv-footer">Dữ liệu được cung cấp và đồng bộ tự động bởi Lụa Vàng CRS</div>
+      <div class="ota-footer-note" data-i18n="inv-footer">Dữ liệu tình trạng phòng cập nhật trực tiếp theo thời gian thực</div>
     </section>
 
-    <!-- STEP 1 -->
+    <!-- BƯỚC 1: TÌM PHÒNG -->
     <section class="step" id="search-section">
       <div class="step-tag" data-i18n="step1-tag">Bước 1</div>
       <h2 data-i18n="step1-h2">Tìm phòng trống</h2>
@@ -98,33 +106,47 @@
       <div id="rooms-container"></div>
     </section>
 
-    <!-- STEP 2 -->
+    <!-- BƯỚC 2: THÔNG TIN KHÁCH & ĐẶT PHÒNG -->
     <section class="step" id="book-section">
       <div class="step-tag" data-i18n="step2-tag">Bước 2</div>
       <h2 data-i18n="step2-h2">Xác nhận đặt phòng</h2>
+      
       <div class="field">
         <label for="selected-room" data-i18n="label-room">Phòng đã chọn</label>
         <input type="text" id="selected-room" readonly
-               data-i18n-placeholder="ph-room" placeholder="Chọn phòng từ kết quả bên trên">
+               data-i18n-placeholder="ph-room" placeholder="Chọn phòng từ danh sách bên trên">
       </div>
+      
       <div class="field">
-        <label for="guest-name" data-i18n="label-guest">Tên khách lưu trú</label>
+        <label for="guest-name" data-i18n="label-guest">Họ và tên khách lưu trú</label>
         <input type="text" id="guest-name"
-               data-i18n-placeholder="ph-guest" placeholder="Họ và tên đầy đủ">
+               data-i18n-placeholder="ph-guest" placeholder="Nguyễn Văn A">
       </div>
+
+      <div class="date-row">
+        <div class="field">
+          <label for="guest-email" data-i18n="label-email">Địa chỉ Email <span class="field-note" data-i18n="label-email-note">(để nhận mã xác nhận)</span></label>
+          <input type="email" id="guest-email" placeholder="email@domain.com" data-i18n-placeholder="ph-email">
+        </div>
+        <div class="field">
+          <label for="guest-phone" data-i18n="label-phone">Số điện thoại liên hệ</label>
+          <input type="tel" id="guest-phone" placeholder="0901 234 567" data-i18n-placeholder="ph-phone">
+        </div>
+      </div>
+
       <button class="btn btn-primary" id="book-btn" data-i18n="btn-book">Xác nhận đặt phòng</button>
       <div id="book-status" class="msg hidden"></div>
       <div id="booking-result" class="booking-panel hidden"></div>
     </section>
 
-    <!-- STEP 3 -->
+    <!-- BƯỚC 3: HỦY ĐẶT PHÒNG -->
     <section class="step" id="cancel-section">
       <div class="step-tag" data-i18n="cancel-tag">Hủy đặt phòng</div>
-      <h2 data-i18n="cancel-h2">Nhập mã để hủy</h2>
+      <h2 data-i18n="cancel-h2">Tra cứu và hủy mã đặt phòng</h2>
       <div class="field">
         <label for="booking-id-input" data-i18n="label-bid">Mã đặt phòng (Booking ID)</label>
         <input type="text" id="booking-id-input"
-               data-i18n-placeholder="ph-bid" placeholder="Dán mã đặt phòng vào đây…">
+               data-i18n-placeholder="ph-bid" placeholder="Dán mã đặt phòng cần hủy vào đây…">
       </div>
       <button class="btn btn-cancel" id="cancel-btn" data-i18n="btn-cancel">Hủy đặt phòng</button>
       <div id="cancel-status" class="msg hidden"></div>
@@ -132,7 +154,7 @@
   </main>
 
   <footer>
-    <p data-i18n="footer-text">VietStay &ensp;·&ensp; Kênh phân phối OTA 1 &ensp;·&ensp; Kết nối Lụa Vàng CRS &ensp;·&ensp; 2026</p>
+    <p data-i18n="footer-text">VietStay · Kênh phân phối trực tuyến chính thức · 2026</p>
   </footer>
 
   <script src="ota1.js"></script>
