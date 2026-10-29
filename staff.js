@@ -1,7 +1,7 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Phần 2: Chặn ghi log thừa trong Rate History
+   Cập nhật: Đọc trực tiếp source_channel từ DB
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -184,7 +184,7 @@ const I18N = {
 
 let currentLang          = 'vi';
 let currentRoomTypeRate  = null;
-let currentBaseRate      = null; // Lưu giá cơ sở hiện tại để chống ghi log trùng
+let currentBaseRate      = null;
 let nbSearchDates        = {};
 let nbSelectedRoom       = null;
 
@@ -258,15 +258,16 @@ function getStatusBadge(status) {
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
 
-function getChannelBadge(ch) {
-  const c = String(ch || '').toLowerCase().trim();
-  if (c === 'ota_1' || c.includes('vietstay')) {
-    return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#FEF0E6;color:#E07B39;border:1px solid rgba(224,123,57,0.3)">OTA 1 · VietStay</span>`;
+// Render nhãn kênh trực tiếp từ source_channel trong database
+function getChannelBadge(sourceChannel) {
+  const ch = String(sourceChannel || '').toLowerCase().trim();
+  if (ch === 'ota_1' || ch.includes('vietstay')) {
+    return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#FEF0E6;color:#E07B39;border:1px solid rgba(224,123,57,0.3)">OTA 1 / VietStay</span>`;
   }
-  if (c === 'ota_2' || c.includes('stayasia')) {
-    return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#E8F8EE;color:#27AE60;border:1px solid rgba(39,174,96,0.3)">OTA 2 · StayAsia</span>`;
+  if (ch === 'ota_2' || ch.includes('stayasia')) {
+    return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#E8F8EE;color:#27AE60;border:1px solid rgba(39,174,96,0.3)">OTA 2 / StayAsia</span>`;
   }
-  return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#F5EDD5;color:#8A7035;border:1px solid rgba(201,169,75,0.3)">Direct Web</span>`;
+  return `<span style="display:inline-block;padding:0.18rem 0.55rem;border-radius:3px;font-size:0.72rem;font-weight:600;background:#F5EDD5;color:#8A7035;border:1px solid rgba(201,169,75,0.3)">Direct</span>`;
 }
 
 // ── LANGUAGE ───────────────────────────────────────────────────
@@ -383,7 +384,7 @@ async function loadDashboardStats() {
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
 }
 
-// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
+// ── TAB 1: QUẢN LÝ BOOKING (ĐỌC TRỰC TIẾP SOURCE_CHANNEL TỪ DB) ─
 async function searchBookings() {
   const name     = (document.getElementById('search-name')?.value     || '').trim();
   const dateFrom = document.getElementById('search-date-from')?.value || '';
@@ -408,14 +409,9 @@ async function searchBookings() {
                      || b.guest?.guest_name 
                      || b.guest_id 
                      || 'Khách lưu trú';
-      
-      let detectedChannel = 'direct';
-      for (const [key, val] of Object.entries(b)) {
-        if (/channel|source/i.test(key) && val) {
-          detectedChannel = String(val).toLowerCase().trim();
-          break;
-        }
-      }
+
+      // Đọc trực tiếp trường source_channel từ DB
+      const ch = b.source_channel || b.channel || 'direct';
 
       return {
         booking_id:     b.booking_id || b.id || '—',
@@ -424,7 +420,7 @@ async function searchBookings() {
         check_in:       b.check_in || '—',
         check_out:      b.check_out || '—',
         status:         b.status || 'confirmed',
-        source_channel: detectedChannel,
+        source_channel: ch,
       };
     });
 
@@ -483,7 +479,7 @@ function renderBookingsTable(rows) {
       <td>${getChannelBadge(b.source_channel)}</td>
       <td>${getStatusBadge(b.status)}</td>
       <td>${b.status === 'confirmed'
-        ? `<button class="action-btn cancel-bk-btn" data-id="${b.booking_id}">Hủy</button>`
+        ? `<button class="action-btn cancel-bk-btn" data-id="${b.booking_id}" data-channel="${b.source_channel}">Hủy</button>`
         : ''}
       </td>`;
     tbody.appendChild(tr);
@@ -493,10 +489,12 @@ function renderBookingsTable(rows) {
     const btn = e.target.closest('.cancel-bk-btn');
     if (!btn) return;
     const id = btn.dataset.id;
+    const ch = btn.dataset.channel || 'direct';
     if (!window.confirm(t('confirm-cancel', id))) return;
     btn.disabled = true; btn.textContent = '…';
     try {
-      const { ok, data } = await callFn('cancel_booking', { booking_id: id });
+      // Staff Portal gửi kèm source_channel khớp với booking để hủy hợp lệ
+      const { ok, data } = await callFn('cancel_booking', { booking_id: id, source_channel: ch });
       if (ok) {
         showMsg('search-bookings-status', 'success', t('msg-cancel-ok', id));
         searchBookings();
@@ -717,7 +715,7 @@ async function loadCurrentRates(roomType) {
 
         if (baseRate && inp) {
           inp.value = baseRate;
-          currentBaseRate = baseRate; // Lưu giá cơ sở hiện tại
+          currentBaseRate = baseRate;
           inp.placeholder = '4000000';
           return;
         }
@@ -739,7 +737,7 @@ async function loadCurrentRates(roomType) {
 
     if (baseRate && inp) {
       inp.value = baseRate;
-      currentBaseRate = baseRate; // Lưu giá cơ sở hiện tại
+      currentBaseRate = baseRate;
       inp.placeholder = '4000000';
 
       if (rulesData && rulesData.length > 0) {
@@ -782,7 +780,6 @@ document.getElementById('rate-room-type')?.addEventListener('change', async func
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
 });
 
-// Chặn update nếu giá mới bằng giá hiện tại
 document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
   const roomType    = (document.getElementById('rate-room-type')?.value || '').trim();
   const newBaseRate = Number(document.getElementById('rate-base-input')?.value);
@@ -818,7 +815,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     }
 
     showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
-    currentBaseRate = newBaseRate; // Cập nhật lại giá hiện tại
+    currentBaseRate = newBaseRate;
 
     await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
   } catch (err) {
