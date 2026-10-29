@@ -1,6 +1,6 @@
 /* ============================================================
    STAYASIA — OTA 2  |  ota2.js
-   Channel: ota_2  |  Bilingual VI/EN  |  4.3 Multi-Guest
+   Channel: ota_2  |  Bilingual VI/EN  |  Multi-Guest
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -12,96 +12,98 @@ const SOURCE_CHANNEL = "ota_2";
 // ── I18N ─────────────────────────────────────────────────────
 const I18N = {
   vi: {
-    'hotel-sub':      'Nền tảng đặt phòng uy tín Châu Á &ensp;·&ensp; OTA Channel 2',
+    'hotel-sub':      'Nền tảng đặt phòng nghỉ dưỡng Châu Á',
     'inv-title':      'Lụa Vàng Resort &amp; Spa',
-    'inv-tag':        'Tình trạng phòng', 'inv-sub': 'phòng còn',
-    'inv-footer':     'Đồng bộ tự động từ Lụa Vàng CRS · Làm mới mỗi 30 giây',
+    'inv-tag':        'Tình trạng phòng thực tế', 'inv-sub': 'phòng còn',
+    'inv-footer':     'Tự động cập nhật từ hệ thống quản trị trung tâm mỗi 30 giây',
     'step1-tag':      'Bước 1', 'step1-h2': 'Tìm phòng trống',
     'label-checkin':  'Ngày nhận phòng', 'label-checkout': 'Ngày trả phòng',
     'btn-search':     'Kiểm tra phòng trống',
     'step2-tag':      'Bước 2', 'step2-h2': 'Xác nhận đặt phòng',
-    'label-room':     'Phòng đã chọn', 'ph-room': 'Chọn phòng từ kết quả bên trên',
-    'label-guest':    'Tên khách lưu trú', 'ph-guest': 'Họ và tên đầy đủ',
-    'label-email':    'Email khách', 'ph-email': 'john@email.com',
+    'label-room':     'Phòng đã chọn', 'ph-room': 'Chọn phòng từ danh sách bên trên',
+    'label-guest':    'Họ và tên khách đại diện', 'ph-guest': 'Nguyễn Văn A',
+    'label-email':    'Địa chỉ Email', 'ph-email': 'guest@domain.com',
     'label-phone':    'Số điện thoại', 'ph-phone': '0901 234 567',
-    'label-returning':'Nhận dạng khách <span>4.3 Returning Guest</span>',
-    'label-multi':    'Khách đi cùng <span>4.3 Multi-Guest</span>',
-    'label-extra':    'Nhập từng khách, phân cách bằng dấu chấm phẩy',
-    'ph-extra':       'Anna Nguyễn, anna@email.com; Tom Trần, tom@email.com',
+    'label-returning':'Thông tin liên hệ xác nhận',
+    'label-multi':    'Danh sách khách đi cùng phòng (nếu có)',
+    'label-extra':    'Nhập từng khách theo định dạng: Họ tên, Email (phân cách bởi dấu chấm phẩy)',
+    'ph-extra':       'Trần Thị B, b@domain.com; Lê Văn C, c@domain.com',
     'btn-book':       'Xác nhận đặt phòng',
-    'cancel-tag':     'Hủy đặt phòng', 'cancel-h2': 'Nhập mã để hủy',
-    'label-bid':      'Mã đặt phòng (Booking ID)', 'ph-bid': 'Dán mã đặt phòng vào đây…',
+    'cancel-tag':     'Quản lý đặt phòng', 'cancel-h2': 'Tra cứu và hủy mã đặt phòng',
+    'label-bid':      'Mã đặt phòng (Booking ID)', 'ph-bid': 'Dán mã đặt phòng cần hủy vào đây…',
     'btn-cancel':     'Hủy đặt phòng',
-    'footer-text':    'StayAsia · Kênh phân phối OTA 2 · Kết nối Lụa Vàng CRS · 2026',
-    'btn-pick':       'Chọn', 'contact': 'Liên hệ', 'unit-night': 'đêm', 'unit-guests': 'người',
-    'bp-label':       'Mã đặt phòng — lưu lại để dùng khi cần hủy',
+    'footer-text':    'StayAsia · Kênh phân phối phòng nghỉ dưỡng Châu Á · 2026',
+    'btn-pick':       'Chọn phòng', 'contact': 'Liên hệ', 'unit-night': 'đêm', 'unit-guests': 'khách',
+    'bp-label':       'Mã đặt phòng — quý khách lưu lại để tra cứu và hủy phòng',
     'btn-copy':       'Sao chép mã', 'btn-copied': 'Đã sao chép ✓', 'copy-prompt': 'Sao chép mã booking:',
     'msg-processing': 'Đang xử lý…',
     'msg-no-dates':   'Vui lòng chọn cả ngày nhận và trả phòng.',
     'msg-date-order': 'Ngày nhận phòng phải trước ngày trả phòng.',
     'msg-searching':  'Đang kiểm tra phòng trống…',
     'msg-no-rooms':   'Không có phòng trống trong khoảng thời gian này.',
-    'msg-no-room-sel':'Chưa chọn phòng. Tìm phòng ở bước 1 và nhấn «Chọn».',
-    'msg-no-guest':   'Vui lòng nhập tên khách lưu trú.',
-    'msg-no-dates2':  'Chưa có ngày lưu trú. Quay lại bước 1.',
-    'msg-booking':    'Đang tạo đặt phòng…',
-    'msg-conflict':   'HTTP 409: Phòng này vừa có người đặt trùng ngày. Vui lòng chọn phòng khác.',
-    'msg-book-err':   'Không thể tạo booking. Thử lại sau.',
-    'msg-book-ok':    'Đặt phòng thành công. Lưu lại mã bên dưới.',
+    'msg-no-room-sel':'Chưa chọn phòng. Vui lòng bấm «Chọn phòng» ở Bước 1.',
+    'msg-no-guest':   'Vui lòng nhập họ và tên khách đại diện.',
+    'msg-no-dates2':  'Chưa chọn ngày lưu trú. Vui lòng quay lại Bước 1.',
+    'msg-booking':    'Đang tiến hành đặt phòng…',
+    'msg-conflict':   'Phòng này vừa có khách đặt cùng thời gian. Vui lòng chọn phòng khác.',
+    'msg-book-err':   'Không thể tạo đặt phòng lúc này. Thử lại sau.',
+    'msg-book-ok':    'Đặt phòng thành công! Lưu lại mã đặt phòng bên dưới.',
     'msg-no-bid':     'Vui lòng nhập mã đặt phòng cần hủy.',
     'msg-cancelling': 'Đang xử lý hủy đặt phòng…',
-    'msg-404':        'Không tìm thấy booking này. Kiểm tra lại mã.',
-    'msg-400':        'Booking này không ở trạng thái có thể hủy.',
-    'msg-cancel-err': 'Không thể hủy booking. Thử lại sau.',
-    'inv-not-synced': 'chưa đồng bộ',
-    'msg-found-rooms':(n)=>`Tìm thấy <strong>${n}</strong> phòng trống.`,
-    'msg-connect-err':(e)=>`Lỗi kết nối: ${e}`,
-    'msg-cancel-ok':  (id)=>`Đã hủy thành công booking <strong>${id}</strong>.`,
+    'msg-404':        'Không tìm thấy mã đặt phòng này. Kiểm tra lại mã.',
+    'msg-400':        'Đơn đặt phòng này không ở trạng thái có thể hủy.',
+    'msg-wrong-channel':'Mã đặt phòng này thuộc kênh khác (không phải đặt qua StayAsia). Quý khách vui lòng truy cập đúng kênh đã đặt để hủy!',
+    'msg-cancel-err': 'Không thể hủy lúc này. Thử lại sau.',
+    'inv-not-synced': 'Đang kết nối lại…',
+    'msg-found-rooms':(n)=>`Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
+    'msg-connect-err':(e)=>`Lỗi kết nối máy chủ: ${e}`,
+    'msg-cancel-ok':  (id)=>`Đã hủy thành công đơn đặt phòng <strong>${id}</strong>.`,
     'confirm-cancel': (id)=>`Xác nhận hủy đặt phòng:\n\n${id}\n\nHành động này không thể hoàn tác.`,
   },
   en: {
-    'hotel-sub':      'Asia\'s Trusted Booking Platform &ensp;·&ensp; OTA Channel 2',
+    'hotel-sub':      'Asia\'s Premier Booking Platform',
     'inv-title':      'Lụa Vàng Resort &amp; Spa',
-    'inv-tag':        'Room Availability', 'inv-sub': 'rooms left',
-    'inv-footer':     'Auto-synced from Lụa Vàng CRS · Refreshes every 30 seconds',
+    'inv-tag':        'Room Availability Status', 'inv-sub': 'rooms left',
+    'inv-footer':     'Auto-synced from Central CRS every 30 seconds',
     'step1-tag':      'Step 1', 'step1-h2': 'Find Available Rooms',
     'label-checkin':  'Check-in Date', 'label-checkout': 'Check-out Date',
     'btn-search':     'Check Availability',
     'step2-tag':      'Step 2', 'step2-h2': 'Confirm Booking',
     'label-room':     'Selected Room', 'ph-room': 'Select a room from the results above',
-    'label-guest':    'Guest Name', 'ph-guest': 'Full name',
-    'label-email':    'Guest Email', 'ph-email': 'john@email.com',
+    'label-guest':    'Primary Guest Name', 'ph-guest': 'John Doe',
+    'label-email':    'Email Address', 'ph-email': 'guest@domain.com',
     'label-phone':    'Phone Number', 'ph-phone': '+84 xxx xxx xxx',
-    'label-returning':'Identify guest <span>4.3 Returning Guest</span>',
-    'label-multi':    'Additional guests <span>4.3 Multi-Guest</span>',
-    'label-extra':    'Enter each guest separated by semicolon',
+    'label-returning':'Contact Information',
+    'label-multi':    'Accompanying Guests',
+    'label-extra':    'Enter each guest separated by semicolon (Name, Email)',
     'ph-extra':       'Anna Nguyen, anna@email.com; Tom Tran, tom@email.com',
     'btn-book':       'Confirm Booking',
-    'cancel-tag':     'Cancel Booking', 'cancel-h2': 'Enter Code to Cancel',
+    'cancel-tag':     'Manage Reservation', 'cancel-h2': 'Cancel Reservation',
     'label-bid':      'Booking ID', 'ph-bid': 'Paste your booking ID here…',
-    'btn-cancel':     'Cancel Booking',
-    'footer-text':    'StayAsia · OTA Channel 2 · Powered by Lụa Vàng CRS · 2026',
+    'btn-cancel':     'Cancel Reservation',
+    'footer-text':    'StayAsia · Asian Distribution Channel · 2026',
     'btn-pick':       'Select', 'contact': 'Contact us', 'unit-night': 'night', 'unit-guests': 'guests',
-    'bp-label':       'Booking ID — save this to use when cancelling',
+    'bp-label':       'Booking Confirmation Code — Keep this code for your stay',
     'btn-copy':       'Copy ID', 'btn-copied': 'Copied ✓', 'copy-prompt': 'Copy your booking ID:',
     'msg-processing': 'Processing…',
     'msg-no-dates':   'Please select both check-in and check-out dates.',
     'msg-date-order': 'Check-in date must be before check-out date.',
     'msg-searching':  'Checking availability…',
-    'msg-no-rooms':   'No rooms available for this period. Please try different dates.',
-    'msg-no-room-sel':'No room selected. Find a room in Step 1 and click "Select".',
-    'msg-no-guest':   'Please enter the guest name.',
-    'msg-no-dates2':  'No stay dates found. Please go back to Step 1.',
-    'msg-booking':    'Creating your booking…',
-    'msg-conflict':   'HTTP 409: This room was just booked for the same dates. Please choose another.',
+    'msg-no-rooms':   'No rooms available for this period.',
+    'msg-no-room-sel':'No room selected. Pick a room in Step 1.',
+    'msg-no-guest':   'Please enter primary guest name.',
+    'msg-no-dates2':  'No stay dates found. Return to Step 1.',
+    'msg-booking':    'Confirming reservation…',
+    'msg-conflict':   'Room already booked for these dates. Please choose another.',
     'msg-book-err':   'Unable to create booking. Please try again.',
-    'msg-book-ok':    'Booking confirmed. Please save the ID below.',
-    'msg-no-bid':     'Please enter the booking ID to cancel.',
+    'msg-book-ok':    'Booking confirmed! Save your booking ID below.',
+    'msg-no-bid':     'Please enter booking ID to cancel.',
     'msg-cancelling': 'Processing cancellation…',
-    'msg-404':        'Booking not found. Please check the booking ID.',
-    'msg-400':        'This booking cannot be cancelled (already cancelled?).',
+    'msg-404':        'Booking ID not found.',
+    'msg-400':        'This booking cannot be cancelled or is already cancelled.',
+    'msg-wrong-channel':'This reservation was booked via another channel. Please cancel via the original booking channel!',
     'msg-cancel-err': 'Unable to cancel booking. Please try again.',
-    'inv-not-synced': 'not synced',
+    'inv-not-synced': 'Reconnecting…',
     'msg-found-rooms':(n)=>`Found <strong>${n}</strong> available room${n!==1?'s':''}.`,
     'msg-connect-err':(e)=>`Connection error: ${e}`,
     'msg-cancel-ok':  (id)=>`Booking <strong>${id}</strong> successfully cancelled.`,
@@ -147,9 +149,9 @@ async function restGet(path,params=''){
   return res.json();
 }
 
-function showMsg(id,type,html){const el=document.getElementById(id);el.className=`msg ${type}`;el.innerHTML=html;}
+function showMsg(id,type,html){const el=document.getElementById(id);if(el){el.className=`msg ${type}`;el.innerHTML=html;}}
 function setBusy(btnId,busy){
-  const btn=document.getElementById(btnId);btn.disabled=busy;
+  const btn=document.getElementById(btnId);if(!btn)return;btn.disabled=busy;
   if(busy){btn.dataset.orig=btn.textContent;btn.textContent=t('msg-processing');}
   else{btn.textContent=btn.dataset.orig||btn.textContent;}
 }
@@ -161,7 +163,6 @@ function rateStr(low,high){
   return t('contact');
 }
 
-// 4.3 Multi-Guest payload builder
 function buildGuestPayload(){
   const name  =(document.getElementById('guest-name')?.value  ||'').trim();
   const email =(document.getElementById('guest-email')?.value ||'').trim();
@@ -180,7 +181,7 @@ function buildGuestPayload(){
 (function(){
   const today=new Date().toISOString().split('T')[0];
   const ci=document.getElementById('check-in'),co=document.getElementById('check-out');
-  ci.min=today;co.min=today;
+  if(!ci||!co)return;ci.min=today;co.min=today;
   ci.addEventListener('change',()=>{co.min=ci.value;if(co.value&&co.value<=ci.value)co.value='';});
 })();
 
@@ -201,7 +202,7 @@ async function loadInventory(){
     const seen=new Set();
     const grid=document.getElementById('inv-grid');grid.innerHTML='';
     rows.forEach(row=>{
-      const key=(row.room_type||'').toLowerCase();
+      const key=(row.room_type||'').toLowerCase().trim();
       if(seen.has(key)) return; seen.add(key);
       const count=Number(row.available_count);
       const cls=count===0?'sold':count<=2?'low':'';
@@ -210,13 +211,15 @@ async function loadInventory(){
         <div class="inv-count">${count}</div><div class="inv-sub">${t('inv-sub')}</div>`;
       grid.appendChild(card);
     });
-    const d=new Date(rows[0].updated_at);
-    document.getElementById('inv-updated').textContent=
-      `${d.toLocaleTimeString('vi-VN')} · ${d.toLocaleDateString('vi-VN')}`;
+    if(rows[0]?.updated_at){
+      const d=new Date(rows[0].updated_at);
+      document.getElementById('inv-updated').textContent=
+        `${d.toLocaleTimeString('vi-VN')} · ${d.toLocaleDateString('vi-VN')}`;
+    }
   }catch{document.getElementById('inv-updated').textContent=t('inv-not-synced');}
 }
 
-document.getElementById('search-btn').addEventListener('click',async()=>{
+document.getElementById('search-btn')?.addEventListener('click',async()=>{
   const ci=document.getElementById('check-in').value;
   const co=document.getElementById('check-out').value;
   if(!ci||!co){showMsg('search-status','warning',t('msg-no-dates'));return;}
@@ -256,7 +259,7 @@ document.getElementById('search-btn').addEventListener('click',async()=>{
   finally{setBusy('search-btn',false);}
 });
 
-document.getElementById('book-btn').addEventListener('click',async()=>{
+document.getElementById('book-btn')?.addEventListener('click',async()=>{
   const roomId=(document.getElementById('selected-room').value||'').trim();
   const payload=buildGuestPayload();
   if(!roomId)           {showMsg('book-status','warning',t('msg-no-room-sel'));return;}
@@ -266,8 +269,12 @@ document.getElementById('book-btn').addEventListener('click',async()=>{
   document.getElementById('booking-result').classList.add('hidden');
   try{
     const{ok,status,data}=await callFn('create_booking',{
-      room_id:roomId,check_in:searchDates.check_in,check_out:searchDates.check_out,
-      source_channel:SOURCE_CHANNEL,...payload,
+      room_id:roomId,
+      check_in:searchDates.check_in,
+      check_out:searchDates.check_out,
+      source_channel:SOURCE_CHANNEL,
+      channel:SOURCE_CHANNEL,
+      ...payload,
     });
     if(status===409){showMsg('book-status','error',t('msg-conflict'));loadInventory();return;}
     if(!ok){showMsg('book-status','error',data.error||t('msg-book-err'));return;}
@@ -277,7 +284,7 @@ document.getElementById('book-btn').addEventListener('click',async()=>{
     panel.innerHTML=`<div class="bp-label">${t('bp-label')}</div>
       <div class="bp-code">${data.booking_id}</div>
       <div class="bp-detail">${roomId} &nbsp;·&nbsp; ${names} &nbsp;·&nbsp; ${searchDates.check_in} → ${searchDates.check_out}
-        &nbsp;·&nbsp; <strong style="color:var(--gold)">StayAsia / OTA 2</strong></div>
+        &nbsp;·&nbsp; <strong style="color:var(--gold)">StayAsia</strong></div>
       <button class="btn-copy" id="copy-bid-btn">${t('btn-copy')}</button>`;
     panel.classList.remove('hidden');
     document.getElementById('booking-id-input').value=data.booking_id;
@@ -291,21 +298,57 @@ document.getElementById('book-btn').addEventListener('click',async()=>{
   finally{setBusy('book-btn',false);}
 });
 
-document.getElementById('cancel-btn').addEventListener('click',async()=>{
+// ── CANCEL (Kiểm tra đúng kênh StayAsia trước khi hủy) ────────
+document.getElementById('cancel-btn')?.addEventListener('click',async()=>{
   const bookingId=(document.getElementById('booking-id-input').value||'').trim();
   if(!bookingId){showMsg('cancel-status','warning',t('msg-no-bid'));return;}
-  if(!window.confirm(t('confirm-cancel',bookingId)))return;
+  
   setBusy('cancel-btn',true);showMsg('cancel-status','loading',t('msg-cancelling'));
+
   try{
-    const{ok,status,data}=await callFn('cancel_booking',{booking_id:bookingId,source_channel:SOURCE_CHANNEL});
+    // 1. KIỂM TRA ĐƠN ĐẶT PHÒNG CÓ THUỘC KÊNH OTA_2 KHÔNG
+    const bookings = await restGet('booking', `?booking_id=eq.${encodeURIComponent(bookingId)}&select=*`);
+    if (!bookings || bookings.length === 0) {
+      showMsg('cancel-status', 'error', t('msg-404'));
+      return;
+    }
+
+    const b = bookings[0];
+    let originalChannel = '';
+    for (const [key, val] of Object.entries(b)) {
+      if (/channel|source/i.test(key) && val) {
+        originalChannel = String(val).toLowerCase().trim();
+        break;
+      }
+    }
+
+    // Nếu đơn thuộc kênh khác (ota_1 hoặc direct) -> Chặn ngay lập tức
+    if (originalChannel && originalChannel !== SOURCE_CHANNEL && originalChannel !== 'stayasia') {
+      showMsg('cancel-status', 'error', t('msg-wrong-channel'));
+      return;
+    }
+
+    // 2. XÁC NHẬN VÀ TIẾN HÀNH HỦY
+    if(!window.confirm(t('confirm-cancel',bookingId))) return;
+
+    const{ok,status,data}=await callFn('cancel_booking',{
+      booking_id:bookingId,
+      source_channel:SOURCE_CHANNEL,
+      channel:SOURCE_CHANNEL
+    });
+
     if(status===404){showMsg('cancel-status','error',t('msg-404'));return;}
     if(status===400){showMsg('cancel-status','warning',data.error||t('msg-400'));return;}
     if(!ok){showMsg('cancel-status','error',data.error||t('msg-cancel-err'));return;}
+
     showMsg('cancel-status','success',t('msg-cancel-ok',bookingId));
     document.getElementById('booking-id-input').value='';
     loadInventory();
-  }catch(err){showMsg('cancel-status','error',t('msg-connect-err',err.message));}
-  finally{setBusy('cancel-btn',false);}
+  }catch(err){
+    showMsg('cancel-status','error',t('msg-connect-err',err.message));
+  }finally{
+    setBusy('cancel-btn',false);
+  }
 });
 
 loadInventory();
