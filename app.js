@@ -1,12 +1,18 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — DIRECT BOOKING FRONTEND
    app.js  |  Channel: direct
+   Update: Đồng bộ giá chuẩn từ v_channel_rates (channel_code = direct)
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
 const ANON_KEY     = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
 const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
+const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
 const SOURCE_CHANNEL = "direct";
+const CHANNEL_MULTIPLIER = 0.95; // Kênh Direct chiết khấu 5% (x 0.95)
+
+// Cache lưu bảng giá từ v_channel_rates cho kênh direct
+let directRatesCache = {};
 
 // ── I18N ─────────────────────────────────────────────────────
 const I18N = {
@@ -147,7 +153,7 @@ function applyLanguage(lang) {
   try { localStorage.setItem('booking-lang', lang); } catch {}
 }
 
-// ── API ───────────────────────────────────────────────────────
+// ── API HELPERS ───────────────────────────────────────────────
 async function callFn(name, body) {
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: 'POST',
@@ -161,6 +167,33 @@ async function callFn(name, body) {
   let data = {};
   try { data = await res.json(); } catch {}
   return { ok: res.ok, status: res.status, data };
+}
+
+async function restGet(path, params = '') {
+  const res = await fetch(`${REST_BASE}/${path}${params}`, {
+    headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` },
+  });
+  if (!res.ok) throw new Error(`REST ${res.status}`);
+  return res.json();
+}
+
+// Lấy bảng giá cập nhật từ view v_channel_rates cho kênh direct
+async function fetchDirectRates() {
+  try {
+    let rows = await restGet('v_channel_rates', `?channel_code=eq.${SOURCE_CHANNEL}`);
+    if (!rows || rows.length === 0) {
+      rows = await restGet('v_channel_rates', `?channel=eq.${SOURCE_CHANNEL}`);
+    }
+    if (rows && rows.length > 0) {
+      rows.forEach(r => {
+        const key = String(r.room_type || '').toLowerCase().trim();
+        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+        if (price > 0) directRatesCache[key] = price;
+      });
+    }
+  } catch (e) {
+    console.warn("Không nạp được v_channel_rates, chuyển sang tính từ Base Rate x 0.95:", e.message);
+  }
 }
 
 // ── UI HELPERS ────────────────────────────────────────────────
@@ -184,10 +217,24 @@ function setBusy(btnId, busy) {
 
 // ── FORMATTING ────────────────────────────────────────────────
 function vnd(n) { return Number(n).toLocaleString('vi-VN') + ' ₫'; }
-function rateStr(low, high) {
+
+// Hiển thị giá phòng chuẩn của kênh Direct (Base Rate x 0.95)
+function getDisplayRate(room) {
   const perNight = `/${t('unit-night')}`;
-  if (low && high && String(low) !== String(high)) return `${vnd(low)} – ${vnd(high)}${perNight}`;
-  if (low) return `${vnd(low)}${perNight}`;
+  const key = String(room.room_type || '').toLowerCase().trim();
+
+  // 1. Nếu có trong v_channel_rates
+  if (directRatesCache[key]) {
+    return `${vnd(directRatesCache[key])}${perNight}`;
+  }
+
+  // 2. Tính từ base rate (rate_low) x 0.95
+  const base = Number(room.rate_low || room.base_rate || 0);
+  if (base > 0) {
+    const directPrice = Math.round(base * CHANNEL_MULTIPLIER);
+    return `${vnd(directPrice)}${perNight}`;
+  }
+
   return t('contact');
 }
 
@@ -233,6 +280,9 @@ document.getElementById('search-btn')?.addEventListener('click', async () => {
   showMsg('search-status', 'loading', t('msg-searching'));
 
   try {
+    // Đảm bảo có bảng giá mới nhất từ CRS
+    await fetchDirectRates();
+
     const { ok, data } = await callFn('check_availability', { 
       check_in: checkIn, 
       check_out: checkOut,
@@ -259,7 +309,7 @@ function renderRooms(rooms) {
           <span style="font-family:var(--sans);font-size:0.85rem">${room.room_id}</span></h4>
         <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} ${t('unit-guests')}</div>
       </div>
-      <div class="room-rate">${rateStr(room.rate_low,room.rate_high)}</div>
+      <div class="room-rate">${getDisplayRate(room)}</div>
       <button class="btn-select" data-id="${room.room_id}">${t('btn-pick')}</button>`;
     list.appendChild(row);
   });
@@ -375,3 +425,6 @@ document.getElementById('cancel-btn')?.addEventListener('click', async () => {
   } catch (err) { showMsg('cancel-status','error',t('msg-connect-err',err.message)); }
   finally { setBusy('cancel-btn', false); }
 });
+
+// Khởi chạy nạp bảng giá ban đầu
+fetchDirectRates();
