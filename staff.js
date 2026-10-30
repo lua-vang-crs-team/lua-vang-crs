@@ -366,8 +366,8 @@ function initLang() {
   applyLanguage(saved);
 }
 
-// ── PIN AUTHENTICATION ─────────────────────────────────────────
-function unlockStaffPortal() {
+// ── PIN AUTHENTICATION (XỬ LÝ DỨT ĐIỂM SỰ KIỆN CLICK & ENTER) ───
+window.unlockStaffPortal = function() {
   const overlay = document.getElementById('pin-overlay');
   if (overlay) {
     overlay.style.setProperty('display', 'none', 'important');
@@ -375,14 +375,15 @@ function unlockStaffPortal() {
     try { overlay.remove(); } catch (err) { overlay.parentNode?.removeChild(overlay); }
   }
 
+  // Khởi động tải dữ liệu sau khi mở cổng
   setTimeout(() => {
     try { loadDashboardStats(); } catch (e) { console.error("Stats err:", e); }
     try { loadRoomTypes(); }      catch (e) { console.error("Room types err:", e); }
     try { searchBookings(); }     catch (e) { console.error("Bookings err:", e); }
   }, 50);
-}
+};
 
-function performLoginAttempt(e) {
+window.handleStaffLogin = function(e) {
   if (e) {
     if (e.preventDefault) e.preventDefault();
     if (e.stopPropagation) e.stopPropagation();
@@ -395,7 +396,7 @@ function performLoginAttempt(e) {
   if (entered === STAFF_PIN) {
     try { sessionStorage.setItem('staff_auth', STAFF_PIN); } catch {}
     hideMsg('pin-msg');
-    unlockStaffPortal();
+    window.unlockStaffPortal();
   } else {
     showMsg('pin-msg', 'error', currentLang === 'en' ? 'Invalid PIN code.' : 'Mã PIN không chính xác.');
     if (card) {
@@ -408,24 +409,17 @@ function performLoginAttempt(e) {
       input.focus();
     }
   }
-}
+};
 
 function initPin() {
   if (sessionStorage.getItem('staff_auth') === STAFF_PIN) {
-    unlockStaffPortal();
+    window.unlockStaffPortal();
     return;
   }
 
-  const input  = document.getElementById('pin-input');
-  const pinBtn = document.getElementById('pin-btn');
-
-  if (pinBtn) pinBtn.onclick = performLoginAttempt;
-
+  const input = document.getElementById('pin-input');
   if (input) {
     input.value = '';
-    input.onkeydown = function(e) {
-      if (e.key === 'Enter') performLoginAttempt(e);
-    };
     setTimeout(() => { input.focus(); }, 150);
   }
 
