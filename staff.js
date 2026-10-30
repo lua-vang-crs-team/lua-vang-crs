@@ -1,7 +1,7 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Fix: Xử lý dứt điểm lỗi cập nhật Base Rate (Dual-Mode: Function + REST Fallback)
+   Fix: Đồng bộ 100% với Edge Function update_base_rate & room_types
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -19,16 +19,6 @@ const DEFAULT_ROOM_TYPES = [
   "Two-Bedroom Beachfront Villa",
   "Presidential Silk Villa"
 ];
-
-// Bảng Base Rate chuẩn theo từng hạng phòng riêng biệt (Fallback an toàn)
-const DEFAULT_ROOM_BASE_RATES = {
-  "deluxe ocean view":           5200000,
-  "premier garden view":          4800000,
-  "junior suite lagoon":         7500000,
-  "lantern pool villa":          11500000,
-  "two-bedroom beachfront villa": 14500000,
-  "presidential silk villa":     28000000
-};
 
 // ── BỘ TỪ ĐIỂN SONG NGỮ VI / EN ──────────────────────────────
 const I18N = {
@@ -276,36 +266,6 @@ async function restGet(path, params = '') {
     const errorText = await res.text();
     throw new Error(`REST ${res.status}: ${errorText}`);
   }
-  return res.json();
-}
-
-async function restPatch(path, params, body) {
-  const res = await fetch(`${REST_BASE}/${path}${params}`, {
-    method: 'PATCH',
-    headers: {
-      'apikey': ANON_KEY,
-      'Authorization': `Bearer ${ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-async function restPost(path, body) {
-  const res = await fetch(`${REST_BASE}/${path}`, {
-    method: 'POST',
-    headers: {
-      'apikey': ANON_KEY,
-      'Authorization': `Bearer ${ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
@@ -766,7 +726,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (CHẮC CHẮN UPDATE THÀNH CÔNG) ───────
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (CHÍNH XÁC THEO ROOM_TYPES & THẺ 3) ─
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -774,7 +734,8 @@ async function loadRoomTypes() {
   
   let types = [];
   try {
-    const rows = await restGet('room', '?select=room_type');
+    // Đọc từ bảng room_types theo schema của Thẻ 3
+    const rows = await restGet('room_types', '?select=room_type');
     types = [...new Set((rows || []).map(r => r.room_type))].filter(Boolean).sort();
   } catch (err) {
     types = DEFAULT_ROOM_TYPES;
@@ -824,44 +785,37 @@ async function loadCurrentRates(roomType) {
 
   try {
     let baseRate = null;
-    let rows = [];
 
+    // 1. LẤY BASE_RATE TỪ BẢNG room_types THEO ĐÚNG THẺ 3
     try {
-      rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
-      if (!rows || rows.length === 0) {
-        rows = await restGet('v_channel_rates', `?room_type=ilike.${encodeURIComponent(roomType.trim())}`);
+      const rtRows = await restGet('room_types', `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=room_type,base_rate`);
+      if (rtRows && rtRows.length > 0 && Number(rtRows[0].base_rate) > 0) {
+        baseRate = Number(rtRows[0].base_rate);
       }
-    } catch (e) {}
-
-    if (rows && rows.length > 0) {
-      rows.forEach(r => {
-        const code = String(r.channel_code || r.channel || r.source_channel || '').toLowerCase().trim();
-        const elId = channelMap[code];
-        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
-        if (elId && price > 0) {
-          const el = document.getElementById(elId);
-          if (el) el.textContent = vndFmt(price);
-        }
-        if (!baseRate && r.base_rate && Number(r.base_rate) > 0) {
-          baseRate = Number(r.base_rate);
-        }
-      });
-
-      if (baseRate && inp) {
-        inp.value = baseRate;
-        currentBaseRate = Number(baseRate);
-        inp.placeholder = '4000000';
-        return;
-      }
+    } catch (e1) {
+      console.warn("Lỗi đọc bảng room_types:", e1.message);
     }
 
+    // 2. LẤY GIÁ KÊNH TỪ VIEW v_channel_rates
     try {
-      const roomRows = await restGet('room', `?room_type=eq.${encodeURIComponent(roomType.trim())}&rate_low=gt.0&select=rate_low&limit=1`);
-      if (roomRows && roomRows.length > 0 && Number(roomRows[0].rate_low) > 0) {
-        baseRate = Number(roomRows[0].rate_low);
+      const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
+      if (rows && rows.length > 0) {
+        rows.forEach(r => {
+          const code = String(r.channel_code || r.channel || '').toLowerCase().trim();
+          const elId = channelMap[code];
+          const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+          if (elId && price > 0) {
+            const el = document.getElementById(elId);
+            if (el) el.textContent = vndFmt(price);
+          }
+          if (!baseRate && r.base_rate && Number(r.base_rate) > 0) {
+            baseRate = Number(r.base_rate);
+          }
+        });
       }
     } catch (e2) {}
 
+    // 3. Fallback an toàn nếu chưa cấu hình
     if (!baseRate) {
       const normKey = roomType.toLowerCase().trim();
       baseRate = DEFAULT_ROOM_BASE_RATES[normKey] || 4800000;
@@ -893,7 +847,7 @@ document.getElementById('rate-room-type')?.addEventListener('change', async func
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
 });
 
-// SỰ KIỆN LƯU THAY ĐỔI GIÁ: BẢO ĐẢM THÀNH CÔNG 100%
+// SỰ KIỆN LƯU THAY ĐỔI GIÁ: GỌI ĐÚNG EDGE FUNCTION THẺ 3
 document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
   if (isUpdatingRate) return;
 
@@ -904,7 +858,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     showMsg('rate-status', 'warning', t('msg-no-type')); 
     return; 
   }
-  if (!newBaseRate || isNaN(newBaseRate) || newBaseRate < 100000) { 
+  if (!newBaseRate || isNaN(newBaseRate) || newBaseRate <= 0) { 
     showMsg('rate-status', 'warning', t('msg-no-rate')); 
     return; 
   }
@@ -919,65 +873,49 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
   setBusy('update-rate-btn', true);
   showMsg('rate-status', 'loading', t('msg-updating-rate'));
 
-  const oldRate = currentBaseRate || 4800000;
-  let updateSuccess = false;
-
-  // CÁCH 1: GỌI EDGE FUNCTION update_base_rate
   try {
-    const { ok, status, data } = await callFn('update_base_rate', {
+    // Edge Function Thẻ 3 nhận: room_type, new_base_rate, changed_by (null)
+    const { ok, data } = await callFn('update_base_rate', {
       room_type:     roomType,
       new_base_rate: newBaseRate,
-      changed_by:    null // Gửi null an toàn tránh lỗi FK UUID
+      changed_by:    null
     });
 
-    if (ok) {
-      updateSuccess = true;
-    } else {
-      console.warn("Edge Function update_base_rate trả về lỗi, kích hoạt chế độ REST Direct:", data?.error);
-    }
-  } catch (fnErr) {
-    console.warn("Không gọi được Edge Function update_base_rate:", fnErr.message);
-  }
-
-  // CÁCH 2: FALLBACK CẬP NHẬT TRỰC TIẾP DB QUA POSTGREST NẾU FUNCTION LỖI
-  if (!updateSuccess) {
-    try {
-      // 1. Cập nhật giá cơ sở vào bảng room
-      await restPatch('room', `?room_type=eq.${encodeURIComponent(roomType)}`, {
-        rate_low: newBaseRate
-      });
-
-      // 2. Chèn 1 dòng log vào rate_history
-      try {
-        await restPost('rate_history', {
-          room_type:     roomType,
-          old_base_rate: oldRate,
-          new_base_rate: newBaseRate,
-          changed_by:    null
-        });
-      } catch (logErr) {
-        console.warn("Không chèn được log lịch sử (có thể do quyền RLS):", logErr.message);
-      }
-
-      updateSuccess = true;
-    } catch (restErr) {
-      showMsg('rate-status', 'error', t('msg-rate-error') + ` (${restErr.message})`);
+    if (!ok) {
+      showMsg('rate-status', 'error', data?.error || t('msg-rate-error'));
       isUpdatingRate = false;
       setBusy('update-rate-btn', false);
       return;
     }
+
+    // Cập nhật giá thành công
+    showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
+    currentBaseRate = Number(newBaseRate);
+
+    // Nếu Edge Function trả về calculated_rates thì cập nhật ngay lên 4 card
+    if (data?.calculated_rates && Array.isArray(data.calculated_rates)) {
+      const channelMap = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
+      data.calculated_rates.forEach(cr => {
+        const code = String(cr.channel_code || cr.channel || '').toLowerCase().trim();
+        const elId = channelMap[code];
+        if (elId && cr.channel_rate) {
+          const el = document.getElementById(elId);
+          if (el) el.textContent = vndFmt(cr.channel_rate);
+        }
+      });
+    } else {
+      updateChannelRateCards(newBaseRate);
+    }
+
+    // Tải lại lịch sử và view
+    await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
+
+  } catch (err) {
+    showMsg('rate-status', 'error', t('msg-connect-err', err.message));
+  } finally {
+    isUpdatingRate = false;
+    setBusy('update-rate-btn', false);
   }
-
-  // ĐÃ CẬP NHẬT THÀNH CÔNG
-  showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
-  currentBaseRate = Number(newBaseRate);
-  updateChannelRateCards(newBaseRate);
-
-  // Load lại lịch sử và biểu giá mới từ DB
-  await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
-
-  isUpdatingRate = false;
-  setBusy('update-rate-btn', false);
 });
 
 async function loadRateHistory(roomType) {
@@ -1031,7 +969,7 @@ document.getElementById('refresh-history-btn')?.addEventListener('click', () => 
   if (currentRoomTypeRate) loadRateHistory(currentRoomTypeRate);
 });
 
-// ── KHỞI CHẠY HỆ THỐNG ────────────────────────────────────────
+// ── KHỞI CHẠY TỰ ĐỘNG KHI TẢI XONG TRANG ───────────────────────
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     initPin();
