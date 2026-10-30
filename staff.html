@@ -28,7 +28,6 @@
       </div>
       <button class="btn pin-btn" id="pin-btn" data-i18n="pin-btn">Đăng nhập</button>
       <div id="pin-msg" class="msg hidden"></div>
-      <!-- Box gợi ý mã PIN song ngữ -->
       <div class="pin-hint" data-i18n-html="pin-hint">Demo access code: <strong>2026</strong> – For academic demonstration only</div>
     </div>
   </div>
@@ -222,6 +221,7 @@
 
           <div class="field" style="margin-bottom:0">
             <label for="rate-changed-by" data-i18n="label-changed-by">Bộ phận thực hiện</label>
+            <!-- display-only: giá trị thật gửi xuống DB là UUID, xem staff.js -->
             <input type="text" id="rate-changed-by"
                    value="Revenue Manager"
                    placeholder="Revenue Manager" readonly>
@@ -232,7 +232,7 @@
                 data-i18n="btn-update-rate">Lưu thay đổi giá</button>
         <div id="rate-status" class="msg hidden"></div>
 
-        <!-- THẺ GIÁ PHÂN PHỐI THEO KÊNH (ĐÃ CÓ DATA-I18N HOÀN CHỈNH) -->
+        <!-- THẺ GIÁ PHÂN PHỐI THEO KÊNH -->
         <div class="rate-channels-section">
           <div class="step-tag" style="margin-top:1.8rem;margin-bottom:0"
                data-i18n="rate-preview-tag">Bảng giá phân phối tự động theo chính sách kênh</div>
@@ -281,6 +281,6 @@
     <p data-i18n="footer-text">Lụa Vàng Resort &amp; Spa · Hệ thống quản lý phòng &amp; vận hành tập trung · 2026</p>
   </footer>
 
-  <script src="staff.js?v=2026_fixed2"></script>
+  <script src="staff.js?v=2026_fixed3"></script>
 </body>
 </html>
