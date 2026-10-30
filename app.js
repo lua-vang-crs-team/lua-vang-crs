@@ -1,6 +1,6 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — DIRECT BOOKING (app.js)
-   Channel: direct | Multiplier: 0.95 (-5%)
+   Channel: direct | Hệ số chiết khấu: × 0.95 (-5%)
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -44,40 +44,66 @@ async function callFn(name, body) {
 
 function vnd(n) { return Number(n).toLocaleString('vi-VN') + ' ₫'; }
 
-// NẠP GIÁ TỪ VIEW v_channel_rates VÀ BẢNG room_types
+// NẠP TRỰC TIẾP GIÁ MỚI TỪ VIEW VÀ BẢNG ROOM_TYPES
 async function fetchChannelRates() {
+  channelRatesCache = {};
   try {
-    const rows = await restGet('v_channel_rates', `?or=(channel_code.eq.${SOURCE_CHANNEL},channel.eq.${SOURCE_CHANNEL})`);
-    if (rows && rows.length > 0) {
-      rows.forEach(r => {
-        const key = String(r.room_type || '').toLowerCase().trim();
-        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
-        if (price > 0) {
-          channelRatesCache[key] = price;
-          const alt = ROOM_TYPE_MAP[r.room_type];
-          if (alt) channelRatesCache[alt.toLowerCase().trim()] = price;
-        }
-      });
-    }
-    // Dự phòng đọc trực tiếp room_types
-    const rtRows = await restGet('room_types', '?select=room_type,base_rate');
-    if (rtRows && rtRows.length > 0) {
-      rtRows.forEach(rt => {
-        const key = String(rt.room_type || '').toLowerCase().trim();
-        const bPrice = Number(rt.base_rate || 0);
-        if (bPrice > 0 && !channelRatesCache[key]) {
-          const directPrice = Math.round(bPrice * CHANNEL_MULT);
-          channelRatesCache[key] = directPrice;
-          const alt = ROOM_TYPE_MAP[rt.room_type];
-          if (alt) channelRatesCache[alt.toLowerCase().trim()] = directPrice;
-        }
-      });
-    }
-  } catch (e) {
-    console.warn("Direct rate load warn:", e.message);
+    // 1. Thử lấy từ v_channel_rates
+    try {
+      const rows = await restGet('v_channel_rates', `?or=(channel_code.eq.${SOURCE_CHANNEL},channel.eq.${SOURCE_CHANNEL})`);
+      if (rows && rows.length > 0) {
+        rows.forEach(r => {
+          const key = String(r.room_type || '').toLowerCase().trim();
+          const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+          if (price > 0) {
+            channelRatesCache[key] = price;
+            const alt = ROOM_TYPE_MAP[r.room_type];
+            if (alt) channelRatesCache[alt.toLowerCase().trim()] = price;
+          }
+        });
+      }
+    } catch (_eView) {}
+
+    // 2. Lấy Base Rate mới nhất từ bảng room_types để tính giá chuẩn
+    try {
+      const rtRows = await restGet('room_types', '?select=room_type,base_rate');
+      if (rtRows && rtRows.length > 0) {
+        rtRows.forEach(rt => {
+          const key = String(rt.room_type || '').toLowerCase().trim();
+          const basePrice = Number(rt.base_rate || 0);
+          if (basePrice > 0) {
+            const calculatedDirect = Math.round(basePrice * CHANNEL_MULT);
+            channelRatesCache[key] = calculatedDirect;
+            const alt = ROOM_TYPE_MAP[rt.room_type];
+            if (alt) channelRatesCache[alt.toLowerCase().trim()] = calculatedDirect;
+          }
+        });
+      }
+    } catch (_eRt) {}
+
+    // 3. Dự phòng lấy lần cập nhật gần nhất từ rate_history
+    try {
+      const histRows = await restGet('rate_history', '?order=changed_at.desc&limit=20');
+      if (histRows && histRows.length > 0) {
+        histRows.forEach(h => {
+          const key = String(h.room_type || '').toLowerCase().trim();
+          const basePrice = Number(h.new_base_rate || 0);
+          if (basePrice > 0 && !channelRatesCache[key]) {
+            const calculatedDirect = Math.round(basePrice * CHANNEL_MULT);
+            channelRatesCache[key] = calculatedDirect;
+            const alt = ROOM_TYPE_MAP[h.room_type];
+            if (alt) channelRatesCache[alt.toLowerCase().trim()] = calculatedDirect;
+          }
+        });
+      }
+    } catch (_eHist) {}
+
+  } catch (err) {
+    console.warn("Lỗi đồng bộ giá Direct:", err.message);
   }
 }
 
+// BẮT BUỘC DÙNG GIÁ TÍNH TỪ BASE RATE MỚI NHẤT
 function getDisplayRate(room) {
   const key = String(room.room_type || '').toLowerCase().trim();
   const altKey = (ROOM_TYPE_MAP[room.room_type] || '').toLowerCase().trim();
@@ -105,7 +131,6 @@ function setBusy(btnId, busy) {
   else { btn.textContent = btn.dataset.orig || btn.textContent; }
 }
 
-// ── TÌM KIẾM PHÒNG ──────────────────────────────────────────
 document.getElementById('search-btn')?.addEventListener('click', async () => {
   const ci = document.getElementById('check-in')?.value;
   const co = document.getElementById('check-out')?.value;
@@ -121,7 +146,8 @@ document.getElementById('search-btn')?.addEventListener('click', async () => {
   showMsg('search-status', 'loading', 'Đang kiểm tra phòng trống…');
 
   try {
-    await fetchChannelRates(); // Luôn lấy giá mới nhất
+    // Luôn tải lại bảng giá mới nhất mỗi lần bấm Search
+    await fetchChannelRates();
 
     const { ok, data } = await callFn('check_availability', {
       check_in: ci, check_out: co, source_channel: SOURCE_CHANNEL
@@ -165,7 +191,6 @@ document.getElementById('search-btn')?.addEventListener('click', async () => {
   }
 });
 
-// ── ĐẶT PHÒNG ────────────────────────────────────────────────
 document.getElementById('book-btn')?.addEventListener('click', async () => {
   const roomId = (document.getElementById('selected-room')?.value || '').trim();
   const name   = (document.getElementById('guest-name')?.value   || '').trim();
@@ -210,7 +235,6 @@ document.getElementById('book-btn')?.addEventListener('click', async () => {
   }
 });
 
-// ── HỦY ĐẶT PHÒNG ────────────────────────────────────────────
 document.getElementById('cancel-btn')?.addEventListener('click', async () => {
   const bid = (document.getElementById('booking-id-input')?.value || '').trim();
   if (!bid) { showMsg('cancel-status', 'warning', 'Vui lòng nhập mã đặt phòng.'); return; }
@@ -230,13 +254,6 @@ document.getElementById('cancel-btn')?.addEventListener('click', async () => {
     showMsg('cancel-status', 'error', `Lỗi kết nối: ${err.message}`);
   } finally {
     setBusy('cancel-btn', false);
-  }
-});
-
-// Lắng nghe sự kiện đổi giá từ tab Staff
-window.addEventListener('storage', (e) => {
-  if (e.key === 'crs_rate_updated') {
-    fetchChannelRates();
   }
 });
 
