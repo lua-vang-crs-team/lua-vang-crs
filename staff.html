@@ -13,23 +13,24 @@
 <body>
 
   <!-- ═══════════════════════ PIN OVERLAY ═══════════════════════ -->
-  <div id="pin-overlay" class="pin-overlay" style="z-index: 999999;">
-    <div class="pin-card" id="pin-card">
-      <div class="pin-logo">Lụa Vàng</div>
-      <div class="pin-divider"></div>
-      <div class="pin-sub" data-i18n="pin-sub">Cổng quản trị nội bộ</div>
-      <div class="pin-field">
-        <input type="password"
-               id="pin-input"
-               placeholder="••••"
-               maxlength="8"
-               autocomplete="off"
-               autofocus>
-      </div>
-      <button type="button" class="btn pin-btn" id="pin-btn" data-i18n="pin-btn">Đăng nhập</button>
-      <div id="pin-msg" class="msg hidden"></div>
-      <div class="pin-hint" data-i18n-html="pin-hint">Demo access code: <strong>2026</strong> – For academic demonstration only</div>
-    </div>
+  <div id="pin-overlay" class="pin-overlay" style="z-index: 999999; display: flex;">
+    <form class="pin-card" id="pin-card" onsubmit="event.preventDefault(); handleStaffLogin(event);" style="pointer-events: auto;">
+      <div class="pin-logo">Lụa Vàng</div>
+      <div class="pin-divider"></div>
+      <div class="pin-sub" data-i18n="pin-sub">Cổng quản trị nội bộ</div>
+      <div class="pin-field">
+        <input type="password"
+               id="pin-input"
+               placeholder="••••"
+               maxlength="8"
+               autocomplete="off"
+               autofocus>
+      </div>
+      <button type="submit" class="btn pin-btn" id="pin-btn" data-i18n="pin-btn">Đăng nhập</button>
+      <div id="pin-msg" class="msg hidden"></div>
+      <div class="pin-hint" data-i18n-html="pin-hint">Demo access code: <strong>2026</strong> – For academic demonstration only</div>
+    </form>
+  </div>
   </div>
 
   <!-- ═══════════════════════ HEADER ════════════════════════════ -->
