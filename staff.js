@@ -1,14 +1,19 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Update: Khắc phục triệt để lỗi đăng nhập PIN & Đồng bộ CRS
+   Fix: changed_by gửi UUID thay vì string "Revenue Manager"
    ============================================================ */
 
-const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
-const ANON_KEY     = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
-const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
-const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
-const STAFF_PIN    = "2026";
+const SUPABASE_URL    = "https://scxjezoysmwyumyebuls.supabase.co";
+const ANON_KEY        = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
+const FN_BASE         = `${SUPABASE_URL}/functions/v1`;
+const REST_BASE       = `${SUPABASE_URL}/rest/v1`;
+const STAFF_PIN       = "2026";
+
+// UUID cố định đại diện cho tài khoản Revenue Manager (demo)
+// Đây là giá trị được gửi xuống cột changed_by (kiểu UUID) trong rate_history
+// UI vẫn hiển thị "Revenue Manager" — không gửi string này xuống DB
+const DEMO_STAFF_UUID = "00000000-0000-0000-0000-000000002026";
 
 // Danh mục 6 hạng phòng chuẩn khớp 100% database inventory
 const DEFAULT_ROOM_TYPES = [
@@ -22,9 +27,9 @@ const DEFAULT_ROOM_TYPES = [
 
 // Bảng Base Rate chuẩn theo từng hạng phòng riêng biệt (Fallback an toàn)
 const DEFAULT_ROOM_BASE_RATES = {
-  "deluxe ocean view":           5200000,
+  "deluxe ocean view":            5200000,
   "premier garden view":          4800000,
-  "junior suite lagoon":         7500000,
+  "junior suite lagoon":          7500000,
   "lantern pool villa":          11500000,
   "two-bedroom beachfront villa": 14500000,
   "presidential silk villa":     28000000
@@ -33,213 +38,213 @@ const DEFAULT_ROOM_BASE_RATES = {
 // ── BỘ TỪ ĐIỂN SONG NGỮ VI / EN ──────────────────────────────
 const I18N = {
   vi: {
-    'hotel-sub-staff':   'Resort &amp; Spa &ensp;·&ensp; Hệ thống quản trị tập trung',
-    'pin-sub':           'Cổng quản trị nội bộ',
-    'pin-btn':           'Đăng nhập',
-    'pin-hint':          'Demo access code: <strong>2026</strong> – For academic demonstration only',
-    'btn-logout':        'Đăng xuất',
-    'stat-arrivals':     'Khách đến hôm nay',
-    'stat-departures':   'Khách đi hôm nay',
-    'stat-occupied':     'Đang lưu trú',
-    'stat-available':    'Phòng còn trống',
-    'tab-bookings':      'Quản lý đặt phòng',
-    'tab-new-booking':   'Tạo đặt phòng mới',
-    'tab-availability':  'Kiểm tra phòng',
-    'tab-rates':         'Quản lý bảng giá',
-    'ph-search':         'Tên khách / Mã đặt phòng / Kênh…',
-    'opt-all-status':    'Tất cả trạng thái',
-    'opt-confirmed':     'Đã xác nhận',
-    'opt-checked-in':    'Đang lưu trú',
-    'opt-checked-out':   'Đã hoàn tất',
-    'opt-cancelled':     'Đã hủy',
+    'hotel-sub-staff':    'Resort &amp; Spa &ensp;·&ensp; Hệ thống quản trị tập trung',
+    'pin-sub':            'Cổng quản trị nội bộ',
+    'pin-btn':            'Đăng nhập',
+    'pin-hint':           'Demo access code: <strong>2026</strong> – For academic demonstration only',
+    'btn-logout':         'Đăng xuất',
+    'stat-arrivals':      'Khách đến hôm nay',
+    'stat-departures':    'Khách đi hôm nay',
+    'stat-occupied':      'Đang lưu trú',
+    'stat-available':     'Phòng còn trống',
+    'tab-bookings':       'Quản lý đặt phòng',
+    'tab-new-booking':    'Tạo đặt phòng mới',
+    'tab-availability':   'Kiểm tra phòng',
+    'tab-rates':          'Quản lý bảng giá',
+    'ph-search':          'Tên khách / Mã đặt phòng / Kênh…',
+    'opt-all-status':     'Tất cả trạng thái',
+    'opt-confirmed':      'Đã xác nhận',
+    'opt-checked-in':     'Đang lưu trú',
+    'opt-checked-out':    'Đã hoàn tất',
+    'opt-cancelled':      'Đã hủy',
     'btn-search-bookings':'Tìm kiếm',
-    'new-bk-tag':        'Đặt phòng tại quầy',
-    'new-bk-h2':         'Tiếp nhận đặt phòng trực tiếp',
-    'label-checkin':     'Ngày nhận phòng',
-    'label-checkout':    'Ngày trả phòng',
-    'btn-search-avail':  'Kiểm tra phòng trống',
-    'label-room':        'Phòng đã chọn',
-    'label-guest':       'Họ và tên khách đại diện',
-    'ph-guest':          'Nguyễn Văn A',
-    'ph-room':           'Chọn phòng từ danh sách',
-    'label-email':       'Địa chỉ Email',
-    'label-phone':       'Số điện thoại liên hệ',
-    'label-extra':       'Khách đi cùng phòng (nếu có)',
-    'ph-extra':          'Tên, email — phân cách bởi dấu chấm phẩy',
-    'btn-book':          'Xác nhận đặt phòng',
-    'avail-tag':         'Tra cứu nhanh',
-    'avail-h2':          'Kiểm tra tình trạng phòng theo giai đoạn',
-    'btn-search':        'Kiểm tra',
-    'rate-tag':          'Quản trị giá bán & Kênh phân phối',
-    'rate-h2':           'Cập nhật giá bán cơ bản (Base Rate)',
-    'label-room-type':   'Hạng phòng áp dụng',
-    'label-base-rate':   'Giá cơ bản / đêm (VNĐ)',
-    'ph-base-rate':      'Chọn hạng phòng để tải giá...',
-    'label-changed-by':  'Bộ phận thực hiện',
-    'btn-update-rate':   'Lưu thay đổi giá',
-    'rate-preview-tag':  'Bảng giá phân phối tự động theo chính sách kênh',
-    'card-ch-direct':    'Kênh Direct (Website)',
-    'card-sub-direct':   'Chiết khấu 5% (× 0.95)',
-    'card-ch-ota1':      'OTA 1 · VietStay',
-    'card-sub-ota1':     'Phí hoa hồng 5% (× 1.05)',
-    'card-ch-ota2':      'OTA 2 · StayAsia',
-    'card-sub-ota2':     'Phí hoa hồng 5% (× 1.05)',
-    'card-ch-gds':       'Kênh GDS / Đại lý',
-    'card-sub-gds':      'Giá chuẩn (× 1.00)',
-    'rate-history-tag':  'Lịch sử điều chỉnh biểu giá',
-    'btn-refresh':       '↻ Làm mới',
-    'footer-text':       'Lụa Vàng Resort & Spa · Hệ thống quản lý phòng & vận hành tập trung · 2026',
-    'bp-label':          'Mã đặt phòng — lưu lại để tra cứu và hủy phòng',
-    'btn-copy':          'Sao chép mã',
-    'btn-copied':        'Đã sao chép ✓',
-    'table-th-id':       'Mã Booking',
-    'table-th-room':     'Số phòng',
-    'table-th-guest':    'Khách hàng',
-    'table-th-checkin':  'Nhận phòng',
-    'table-th-checkout': 'Trả phòng',
-    'table-th-status':   'Trạng thái',
-    'table-th-channel':  'Kênh đặt',
-    'table-th-actions':  'Thao tác',
-    'table-th-hist-room':'Hạng phòng',
-    'table-th-hist-old': 'Giá cũ',
-    'table-th-hist-new': 'Giá điều chỉnh',
-    'table-th-hist-by':  'Người thực hiện',
-    'table-th-hist-time':'Thời gian cập nhật',
-    'btn-pick':          'Chọn',
-    'contact':           'Liên hệ',
-    'msg-loading':       'Đang tải dữ liệu…',
-    'msg-searching':     'Đang tìm kiếm…',
-    'msg-no-results':    'Không tìm thấy dữ liệu phù hợp.',
-    'msg-no-dates':      'Vui lòng chọn ngày nhận và trả phòng.',
-    'msg-no-room-sel':   'Vui lòng chọn phòng lưu trú.',
-    'msg-no-guest':      'Vui lòng nhập tên khách lưu trú.',
-    'msg-no-type':       'Vui lòng chọn hạng phòng.',
-    'msg-no-rate':       'Vui lòng nhập mức giá hợp lệ (≥ 100,000 ₫).',
-    'msg-same-rate':     'Mức giá mới trùng với giá hiện tại. Vui lòng nhập giá khác để cập nhật.',
-    'msg-no-avail-rooms':'Hiện không có phòng trống cho khoảng thời gian này.',
-    'msg-updating-rate': 'Đang đồng bộ biểu giá mới sang các kênh…',
-    'msg-booking':       'Đang tiến hành tạo đơn đặt phòng…',
-    'msg-book-success':  'Đã tạo đơn đặt phòng thành công.',
-    'msg-conflict':      'Phòng đã có khách đặt trùng ngày (Xung đột trạng thái).',
-    'no-history':        'Chưa có lịch sử thay đổi biểu giá cho hạng phòng này.',
-    'loading-types':     'Đang tải danh mục phòng…',
-    'select-type-first': 'Vui lòng chọn hạng phòng để xem bảng giá và lịch sử…',
-    'select-type-opt':   'Chọn hạng phòng…',
-    'msg-rate-error':    'Không thể cập nhật biểu giá. Vui lòng kiểm tra lại cấu hình.',
-    'msg-found-rooms':   (n) => `Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
-    'msg-connect-err':   (e) => `Lỗi kết nối máy chủ: ${e}`,
-    'msg-rate-success':  (rt, r) => `Đã cập nhật giá cơ sở cho hạng <strong>${rt}</strong> thành <strong>${vndFmt(r)}</strong>. Toàn bộ các kênh phân phối đã được đồng bộ.`,
-    'msg-cancel-ok':     (id) => `Đã hủy thành công đơn đặt phòng <strong>${id}</strong>.`,
-    'confirm-cancel':    (id) => `Xác nhận hủy đặt phòng:\n\n${id}\n\nThao tác này sẽ giải phóng phòng trên tất cả các kênh phân phối.`,
+    'new-bk-tag':         'Đặt phòng tại quầy',
+    'new-bk-h2':          'Tiếp nhận đặt phòng trực tiếp',
+    'label-checkin':      'Ngày nhận phòng',
+    'label-checkout':     'Ngày trả phòng',
+    'btn-search-avail':   'Kiểm tra phòng trống',
+    'label-room':         'Phòng đã chọn',
+    'label-guest':        'Họ và tên khách đại diện',
+    'ph-guest':           'Nguyễn Văn A',
+    'ph-room':            'Chọn phòng từ danh sách',
+    'label-email':        'Địa chỉ Email',
+    'label-phone':        'Số điện thoại liên hệ',
+    'label-extra':        'Khách đi cùng phòng (nếu có)',
+    'ph-extra':           'Tên, email — phân cách bởi dấu chấm phẩy',
+    'btn-book':           'Xác nhận đặt phòng',
+    'avail-tag':          'Tra cứu nhanh',
+    'avail-h2':           'Kiểm tra tình trạng phòng theo giai đoạn',
+    'btn-search':         'Kiểm tra',
+    'rate-tag':           'Quản trị giá bán & Kênh phân phối',
+    'rate-h2':            'Cập nhật giá bán cơ bản (Base Rate)',
+    'label-room-type':    'Hạng phòng áp dụng',
+    'label-base-rate':    'Giá cơ bản / đêm (VNĐ)',
+    'ph-base-rate':       'Chọn hạng phòng để tải giá...',
+    'label-changed-by':   'Bộ phận thực hiện',
+    'btn-update-rate':    'Lưu thay đổi giá',
+    'rate-preview-tag':   'Bảng giá phân phối tự động theo chính sách kênh',
+    'card-ch-direct':     'Kênh Direct (Website)',
+    'card-sub-direct':    'Chiết khấu 5% (× 0.95)',
+    'card-ch-ota1':       'OTA 1 · VietStay',
+    'card-sub-ota1':      'Phí hoa hồng 5% (× 1.05)',
+    'card-ch-ota2':       'OTA 2 · StayAsia',
+    'card-sub-ota2':      'Phí hoa hồng 5% (× 1.05)',
+    'card-ch-gds':        'Kênh GDS / Đại lý',
+    'card-sub-gds':       'Giá chuẩn (× 1.00)',
+    'rate-history-tag':   'Lịch sử điều chỉnh biểu giá',
+    'btn-refresh':        '↻ Làm mới',
+    'footer-text':        'Lụa Vàng Resort & Spa · Hệ thống quản lý phòng & vận hành tập trung · 2026',
+    'bp-label':           'Mã đặt phòng — lưu lại để tra cứu và hủy phòng',
+    'btn-copy':           'Sao chép mã',
+    'btn-copied':         'Đã sao chép ✓',
+    'table-th-id':        'Mã Booking',
+    'table-th-room':      'Số phòng',
+    'table-th-guest':     'Khách hàng',
+    'table-th-checkin':   'Nhận phòng',
+    'table-th-checkout':  'Trả phòng',
+    'table-th-status':    'Trạng thái',
+    'table-th-channel':   'Kênh đặt',
+    'table-th-actions':   'Thao tác',
+    'table-th-hist-room': 'Hạng phòng',
+    'table-th-hist-old':  'Giá cũ',
+    'table-th-hist-new':  'Giá điều chỉnh',
+    'table-th-hist-by':   'Người thực hiện',
+    'table-th-hist-time': 'Thời gian cập nhật',
+    'btn-pick':           'Chọn',
+    'contact':            'Liên hệ',
+    'msg-loading':        'Đang tải dữ liệu…',
+    'msg-searching':      'Đang tìm kiếm…',
+    'msg-no-results':     'Không tìm thấy dữ liệu phù hợp.',
+    'msg-no-dates':       'Vui lòng chọn ngày nhận và trả phòng.',
+    'msg-no-room-sel':    'Vui lòng chọn phòng lưu trú.',
+    'msg-no-guest':       'Vui lòng nhập tên khách lưu trú.',
+    'msg-no-type':        'Vui lòng chọn hạng phòng.',
+    'msg-no-rate':        'Vui lòng nhập mức giá hợp lệ (≥ 100,000 ₫).',
+    'msg-same-rate':      'Mức giá mới trùng với giá hiện tại. Vui lòng nhập giá khác để cập nhật.',
+    'msg-no-avail-rooms': 'Hiện không có phòng trống cho khoảng thời gian này.',
+    'msg-updating-rate':  'Đang đồng bộ biểu giá mới sang các kênh…',
+    'msg-booking':        'Đang tiến hành tạo đơn đặt phòng…',
+    'msg-book-success':   'Đã tạo đơn đặt phòng thành công.',
+    'msg-conflict':       'Phòng đã có khách đặt trùng ngày (Xung đột trạng thái).',
+    'no-history':         'Chưa có lịch sử thay đổi biểu giá cho hạng phòng này.',
+    'loading-types':      'Đang tải danh mục phòng…',
+    'select-type-first':  'Vui lòng chọn hạng phòng để xem bảng giá và lịch sử…',
+    'select-type-opt':    'Chọn hạng phòng…',
+    'msg-rate-error':     'Không thể cập nhật biểu giá. Vui lòng kiểm tra lại cấu hình.',
+    'msg-found-rooms':    (n) => `Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
+    'msg-connect-err':    (e) => `Lỗi kết nối máy chủ: ${e}`,
+    'msg-rate-success':   (rt, r) => `Đã cập nhật giá cơ sở cho hạng <strong>${rt}</strong> thành <strong>${vndFmt(r)}</strong>. Toàn bộ các kênh phân phối đã được đồng bộ.`,
+    'msg-cancel-ok':      (id) => `Đã hủy thành công đơn đặt phòng <strong>${id}</strong>.`,
+    'confirm-cancel':     (id) => `Xác nhận hủy đặt phòng:\n\n${id}\n\nThao tác này sẽ giải phóng phòng trên tất cả các kênh phân phối.`,
   },
   en: {
-    'hotel-sub-staff':   'Resort &amp; Spa &ensp;·&ensp; Central Management System',
-    'pin-sub':           'Internal Staff Portal',
-    'pin-btn':           'Sign In',
-    'pin-hint':          'Demo access code: <strong>2026</strong> – For academic demonstration only',
-    'btn-logout':        'Sign Out',
-    'stat-arrivals':     'Arrivals Today',
-    'stat-departures':   'Departures Today',
-    'stat-occupied':     'In-House Guests',
-    'stat-available':    'Available Rooms',
-    'tab-bookings':      'Reservations',
-    'tab-new-booking':   'New Reservation',
-    'tab-availability':  'Room Availability',
-    'tab-rates':         'Rate Management',
-    'ph-search':         'Guest name / Booking ID / Channel…',
-    'opt-all-status':    'All Statuses',
-    'opt-confirmed':     'Confirmed',
-    'opt-checked-in':    'Checked-in',
-    'opt-checked-out':   'Checked-out',
-    'opt-cancelled':     'Cancelled',
+    'hotel-sub-staff':    'Resort &amp; Spa &ensp;·&ensp; Central Management System',
+    'pin-sub':            'Internal Staff Portal',
+    'pin-btn':            'Sign In',
+    'pin-hint':           'Demo access code: <strong>2026</strong> – For academic demonstration only',
+    'btn-logout':         'Sign Out',
+    'stat-arrivals':      'Arrivals Today',
+    'stat-departures':    'Departures Today',
+    'stat-occupied':      'In-House Guests',
+    'stat-available':     'Available Rooms',
+    'tab-bookings':       'Reservations',
+    'tab-new-booking':    'New Reservation',
+    'tab-availability':   'Room Availability',
+    'tab-rates':          'Rate Management',
+    'ph-search':          'Guest name / Booking ID / Channel…',
+    'opt-all-status':     'All Statuses',
+    'opt-confirmed':      'Confirmed',
+    'opt-checked-in':     'Checked-in',
+    'opt-checked-out':    'Checked-out',
+    'opt-cancelled':      'Cancelled',
     'btn-search-bookings':'Search',
-    'new-bk-tag':        'Front Desk Booking',
-    'new-bk-h2':         'Create In-Person Reservation',
-    'label-checkin':     'Check-in Date',
-    'label-checkout':    'Check-out Date',
-    'btn-search-avail':  'Check Availability',
-    'label-room':        'Selected Room',
-    'label-guest':       'Primary Guest Name',
-    'ph-guest':          'John Doe',
-    'ph-room':           'Select room from list',
-    'label-email':       'Email Address',
-    'label-phone':       'Phone Number',
-    'label-extra':       'Accompanying Guests (optional)',
-    'ph-extra':          'Name, email — separated by semicolons',
-    'btn-book':          'Confirm Reservation',
-    'avail-tag':         'Quick Search',
-    'avail-h2':          'Room Availability Status',
-    'btn-search':        'Check',
-    'rate-tag':          'Revenue & Channel Management',
-    'rate-h2':           'Update Room Base Rates',
-    'label-room-type':   'Room Category',
-    'label-base-rate':   'Base Rate / Night (VND)',
-    'ph-base-rate':      'Select a category to view rates...',
-    'label-changed-by':  'Updated By',
-    'btn-update-rate':   'Apply Rate Change',
-    'rate-preview-tag':  'Auto-calculated Channel Rates',
-    'card-ch-direct':    'Direct Channel (Website)',
-    'card-sub-direct':   'Direct Discount 5% (× 0.95)',
-    'card-ch-ota1':      'OTA 1 · VietStay',
-    'card-sub-ota1':     'Commission Fee 5% (× 1.05)',
-    'card-ch-ota2':      'OTA 2 · StayAsia',
-    'card-sub-ota2':     'Commission Fee 5% (× 1.05)',
-    'card-ch-gds':       'GDS / Travel Agent',
-    'card-sub-gds':      'Standard Rate (× 1.00)',
-    'rate-history-tag':  'Rate Modification History',
-    'btn-refresh':       '↻ Refresh',
-    'footer-text':       'Lua Vang Resort & Spa · Centralized PMS/CRS Portal · 2026',
-    'bp-label':          'Booking Reference Code',
-    'btn-copy':          'Copy Code',
-    'btn-copied':        'Copied ✓',
-    'table-th-id':       'Booking ID',
-    'table-th-room':     'Room',
-    'table-th-guest':    'Guest',
-    'table-th-checkin':  'Check-in',
-    'table-th-checkout': 'Check-out',
-    'table-th-status':   'Status',
-    'table-th-channel':  'Channel',
-    'table-th-actions':  'Actions',
-    'table-th-hist-room':'Category',
-    'table-th-hist-old': 'Previous Rate',
-    'table-th-hist-new': 'Updated Rate',
-    'table-th-hist-by':  'Updated By',
-    'table-th-hist-time':'Timestamp',
-    'btn-pick':          'Select',
-    'contact':           'Contact us',
-    'msg-loading':       'Loading…',
-    'msg-searching':     'Searching…',
-    'msg-no-results':    'No reservations found.',
-    'msg-no-dates':      'Please select dates.',
-    'msg-no-room-sel':   'Please choose a room.',
-    'msg-no-guest':      'Please enter guest name.',
-    'msg-no-type':       'Please select a room category.',
-    'msg-no-rate':       'Please enter a valid rate (≥ 100,000 VND).',
-    'msg-same-rate':     'New rate is identical to the current rate. Please enter a different rate.',
-    'msg-no-avail-rooms':'No rooms available for the selected dates.',
-    'msg-updating-rate': 'Synchronizing new rates across channels…',
-    'msg-booking':       'Creating reservation…',
-    'msg-book-success':  'Reservation successfully created.',
-    'msg-conflict':      'Room conflict detected (already reserved).',
-    'no-history':        'No rate change history recorded for this room type.',
-    'loading-types':     'Loading room categories…',
-    'select-type-first': 'Select a room category to review pricing and logs…',
-    'select-type-opt':   'Select room category…',
-    'msg-rate-error':    'Could not update rates. Please check configuration.',
-    'msg-found-rooms':   (n) => `Found <strong>${n}</strong> available room${n !== 1 ? 's' : ''}.`,
-    'msg-connect-err':   (e) => `Server error: ${e}`,
-    'msg-rate-success':  (rt, r) => `Base rate for <strong>${rt}</strong> updated to <strong>${vndFmt(r)}</strong>. All distribution channels synchronized.`,
-    'msg-cancel-ok':     (id) => `Reservation <strong>${id}</strong> has been cancelled.`,
-    'confirm-cancel':    (id) => `Confirm cancellation of booking:\n\n${id}\n\nInventory will be reopened on all channels.`,
+    'new-bk-tag':         'Front Desk Booking',
+    'new-bk-h2':          'Create In-Person Reservation',
+    'label-checkin':      'Check-in Date',
+    'label-checkout':     'Check-out Date',
+    'btn-search-avail':   'Check Availability',
+    'label-room':         'Selected Room',
+    'label-guest':        'Primary Guest Name',
+    'ph-guest':           'John Doe',
+    'ph-room':            'Select room from list',
+    'label-email':        'Email Address',
+    'label-phone':        'Phone Number',
+    'label-extra':        'Accompanying Guests (optional)',
+    'ph-extra':           'Name, email — separated by semicolons',
+    'btn-book':           'Confirm Reservation',
+    'avail-tag':          'Quick Search',
+    'avail-h2':           'Room Availability Status',
+    'btn-search':         'Check',
+    'rate-tag':           'Revenue & Channel Management',
+    'rate-h2':            'Update Room Base Rates',
+    'label-room-type':    'Room Category',
+    'label-base-rate':    'Base Rate / Night (VND)',
+    'ph-base-rate':       'Select a category to view rates...',
+    'label-changed-by':   'Updated By',
+    'btn-update-rate':    'Apply Rate Change',
+    'rate-preview-tag':   'Auto-calculated Channel Rates',
+    'card-ch-direct':     'Direct Channel (Website)',
+    'card-sub-direct':    'Direct Discount 5% (× 0.95)',
+    'card-ch-ota1':       'OTA 1 · VietStay',
+    'card-sub-ota1':      'Commission Fee 5% (× 1.05)',
+    'card-ch-ota2':       'OTA 2 · StayAsia',
+    'card-sub-ota2':      'Commission Fee 5% (× 1.05)',
+    'card-ch-gds':        'GDS / Travel Agent',
+    'card-sub-gds':       'Standard Rate (× 1.00)',
+    'rate-history-tag':   'Rate Modification History',
+    'btn-refresh':        '↻ Refresh',
+    'footer-text':        'Lua Vang Resort & Spa · Centralized PMS/CRS Portal · 2026',
+    'bp-label':           'Booking Reference Code',
+    'btn-copy':           'Copy Code',
+    'btn-copied':         'Copied ✓',
+    'table-th-id':        'Booking ID',
+    'table-th-room':      'Room',
+    'table-th-guest':     'Guest',
+    'table-th-checkin':   'Check-in',
+    'table-th-checkout':  'Check-out',
+    'table-th-status':    'Status',
+    'table-th-channel':   'Channel',
+    'table-th-actions':   'Actions',
+    'table-th-hist-room': 'Category',
+    'table-th-hist-old':  'Previous Rate',
+    'table-th-hist-new':  'Updated Rate',
+    'table-th-hist-by':   'Updated By',
+    'table-th-hist-time': 'Timestamp',
+    'btn-pick':           'Select',
+    'contact':            'Contact us',
+    'msg-loading':        'Loading…',
+    'msg-searching':      'Searching…',
+    'msg-no-results':     'No reservations found.',
+    'msg-no-dates':       'Please select dates.',
+    'msg-no-room-sel':    'Please choose a room.',
+    'msg-no-guest':       'Please enter guest name.',
+    'msg-no-type':        'Please select a room category.',
+    'msg-no-rate':        'Please enter a valid rate (≥ 100,000 VND).',
+    'msg-same-rate':      'New rate is identical to the current rate. Please enter a different rate.',
+    'msg-no-avail-rooms': 'No rooms available for the selected dates.',
+    'msg-updating-rate':  'Synchronizing new rates across channels…',
+    'msg-booking':        'Creating reservation…',
+    'msg-book-success':   'Reservation successfully created.',
+    'msg-conflict':       'Room conflict detected (already reserved).',
+    'no-history':         'No rate change history recorded for this room type.',
+    'loading-types':      'Loading room categories…',
+    'select-type-first':  'Select a room category to review pricing and logs…',
+    'select-type-opt':    'Select room category…',
+    'msg-rate-error':     'Could not update rates. Please check configuration.',
+    'msg-found-rooms':    (n) => `Found <strong>${n}</strong> available room${n !== 1 ? 's' : ''}.`,
+    'msg-connect-err':    (e) => `Server error: ${e}`,
+    'msg-rate-success':   (rt, r) => `Base rate for <strong>${rt}</strong> updated to <strong>${vndFmt(r)}</strong>. All distribution channels synchronized.`,
+    'msg-cancel-ok':      (id) => `Reservation <strong>${id}</strong> has been cancelled.`,
+    'confirm-cancel':     (id) => `Confirm cancellation of booking:\n\n${id}\n\nInventory will be reopened on all channels.`,
   },
 };
 
-let currentLang          = 'vi';
-let currentRoomTypeRate  = null;
-let currentBaseRate      = null;
-let nbSearchDates        = {};
-let nbSelectedRoom       = null;
-let isUpdatingRate       = false;
+let currentLang         = 'vi';
+let currentRoomTypeRate = null;
+let currentBaseRate     = null;
+let nbSearchDates       = {};
+let nbSelectedRoom      = null;
+let isUpdatingRate      = false;
 
 // ── TRANSLATE & FORMAT ─────────────────────────────────────────
 function t(key, ...args) {
@@ -256,11 +261,24 @@ function rateStr(low, high) {
   return t('contact');
 }
 
+// Hiển thị label thân thiện cho changed_by trong lịch sử giá
+// Nếu là DEMO_STAFF_UUID → "Revenue Manager"; UUID khác → hiện nguyên UUID (rút gọn)
+function changedByLabel(val) {
+  if (!val) return '—';
+  if (val === DEMO_STAFF_UUID) return 'Revenue Manager';
+  // UUID khác: rút gọn 8 ký tự đầu để dễ đọc
+  return val.length > 8 ? val.slice(0, 8) + '…' : val;
+}
+
 // ── API HELPERS ────────────────────────────────────────────────
 async function callFn(name, body) {
   const res = await fetch(`${FN_BASE}/${name}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${ANON_KEY}`,
+      'apikey':        ANON_KEY,
+    },
     body: JSON.stringify(body),
   });
   let data = {};
@@ -270,7 +288,10 @@ async function callFn(name, body) {
 
 async function restGet(path, params = '') {
   const res = await fetch(`${REST_BASE}/${path}${params}`, {
-    headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` },
+    headers: {
+      'apikey':        ANON_KEY,
+      'Authorization': `Bearer ${ANON_KEY}`,
+    },
   });
   if (!res.ok) {
     const errorText = await res.text();
@@ -297,7 +318,7 @@ function setBusy(btnId, busy) {
   if (!btn) return;
   btn.disabled = busy;
   if (busy) { btn.dataset.orig = btn.textContent; btn.textContent = t('msg-loading'); }
-  else { btn.textContent = btn.dataset.orig || btn.textContent; }
+  else      { btn.textContent = btn.dataset.orig || btn.textContent; }
 }
 
 function getStatusBadge(status) {
@@ -342,7 +363,7 @@ function applyLanguage(lang) {
     { el.placeholder = t(el.dataset.i18nPlaceholder); });
 
   const typeSel = document.getElementById('rate-room-type');
-  if (typeSel && typeSel.options[0] && typeSel.options[0].value === "") {
+  if (typeSel && typeSel.options[0] && typeSel.options[0].value === '') {
     typeSel.options[0].textContent = t('select-type-opt');
   }
 
@@ -366,18 +387,16 @@ function initLang() {
   applyLanguage(saved);
 }
 
-// ── PIN AUTHENTICATION (ĐÃ FIX LỖI KẸT OVERLAY) ───────────────
+// ── PIN AUTHENTICATION ─────────────────────────────────────────
 function showApp() {
   const overlay = document.getElementById('pin-overlay');
   if (overlay) {
     overlay.classList.add('hidden');
-    overlay.style.display = 'none'; // Ép ẩn triệt để
+    overlay.style.display = 'none';
   }
-
-  // Chạy các hàm tải dữ liệu độc lập qua try...catch
-  try { loadDashboardStats(); } catch (e) { console.error("Lỗi stats:", e); }
-  try { loadRoomTypes(); }      catch (e) { console.error("Lỗi room types:", e); }
-  try { searchBookings(); }     catch (e) { console.error("Lỗi bookings:", e); }
+  try { loadDashboardStats(); } catch (e) { console.error('Lỗi stats:', e); }
+  try { loadRoomTypes(); }      catch (e) { console.error('Lỗi room types:', e); }
+  try { searchBookings(); }     catch (e) { console.error('Lỗi bookings:', e); }
 }
 
 function initPin() {
@@ -386,59 +405,35 @@ function initPin() {
   const card    = document.getElementById('pin-card');
   const pinBtn  = document.getElementById('pin-btn');
 
-  // Kiểm tra phiên đăng nhập
   if (sessionStorage.getItem('staff_auth') === STAFF_PIN) {
     showApp();
     return;
   }
 
-  if (overlay) {
-    overlay.classList.remove('hidden');
-    overlay.style.display = 'flex';
-  }
-
-  if (input) {
-    input.value = '';
-    setTimeout(() => input.focus(), 150);
-  }
+  if (overlay) { overlay.classList.remove('hidden'); overlay.style.display = 'flex'; }
+  if (input)   { input.value = ''; setTimeout(() => input.focus(), 150); }
 
   function attempt(e) {
     if (e) e.preventDefault();
     const entered = (input?.value || '').trim();
-
     if (entered === STAFF_PIN) {
       try { sessionStorage.setItem('staff_auth', STAFF_PIN); } catch {}
       hideMsg('pin-msg');
       showApp();
     } else {
       showMsg('pin-msg', 'error', currentLang === 'en' ? 'Invalid PIN code.' : 'Mã PIN không chính xác.');
-      if (card) {
-        card.classList.remove('shake');
-        void card.offsetWidth;
-        card.classList.add('shake');
-      }
-      if (input) {
-        input.value = '';
-        input.focus();
-      }
+      if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+      if (input) { input.value = ''; input.focus(); }
     }
   }
 
   pinBtn?.addEventListener('click', attempt);
-  input?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') attempt(e);
-  });
+  input?.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(e); });
 
   document.getElementById('logout-btn')?.addEventListener('click', () => {
     try { sessionStorage.removeItem('staff_auth'); } catch {}
-    if (overlay) {
-      overlay.classList.remove('hidden');
-      overlay.style.display = 'flex';
-    }
-    if (input) {
-      input.value = '';
-      input.focus();
-    }
+    if (overlay) { overlay.classList.remove('hidden'); overlay.style.display = 'flex'; }
+    if (input)   { input.value = ''; input.focus(); }
     hideMsg('pin-msg');
   });
 }
@@ -459,23 +454,19 @@ function initTabs() {
 // ── DASHBOARD STATS ─────────────────────────────────────────────
 async function loadDashboardStats() {
   const today = new Date().toISOString().split('T')[0];
-
   const results = await Promise.allSettled([
     restGet('booking', `?check_in=eq.${today}&status=eq.confirmed&select=booking_id`),
     restGet('booking', `?check_out=eq.${today}&status=in.(confirmed,checked_in)&select=booking_id`),
     restGet('booking', `?check_in=lte.${today}&check_out=gt.${today}&status=eq.confirmed&select=booking_id`),
-    restGet('room', '?select=room_id')
+    restGet('room', '?select=room_id'),
   ]);
-
   const arrivals   = results[0].status === 'fulfilled' ? results[0].value : [];
   const departures = results[1].status === 'fulfilled' ? results[1].value : [];
   const occupied   = results[2].status === 'fulfilled' ? results[2].value : [];
   const allRooms   = results[3].status === 'fulfilled' ? results[3].value : [];
-
   const occCount   = Array.isArray(occupied) ? occupied.length : 0;
   const totalRooms = Array.isArray(allRooms) && allRooms.length > 0 ? allRooms.length : 180;
-
-  document.getElementById('stat-arrivals').textContent   = Array.isArray(arrivals) ? arrivals.length : '0';
+  document.getElementById('stat-arrivals').textContent   = Array.isArray(arrivals)   ? arrivals.length   : '0';
   document.getElementById('stat-departures').textContent = Array.isArray(departures) ? departures.length : '0';
   document.getElementById('stat-occupied').textContent   = occCount;
   document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
@@ -497,29 +488,17 @@ async function searchBookings() {
   if (dateTo)   filterQuery += `&check_out=lte.${dateTo}`;
 
   let rows = [];
-
   try {
     const raw = await restGet('booking', `?select=*&order=check_in.desc&limit=100${filterQuery}`);
-    
-    rows = (raw || []).map(b => {
-      const guestName = b.guest_name 
-                     || b.guest?.guest_name 
-                     || b.guest_id 
-                     || 'Khách lưu trú';
-
-      const ch = b.source_channel || b.channel || 'direct';
-
-      return {
-        booking_id:     b.booking_id || b.id || '—',
-        room_id:        b.room_id || '—',
-        guest_name:     guestName,
-        check_in:       b.check_in || '—',
-        check_out:      b.check_out || '—',
-        status:         b.status || 'confirmed',
-        source_channel: ch,
-      };
-    });
-
+    rows = (raw || []).map(b => ({
+      booking_id:     b.booking_id || b.id || '—',
+      room_id:        b.room_id || '—',
+      guest_name:     b.guest_name || b.guest?.guest_name || b.guest_id || 'Khách lưu trú',
+      check_in:       b.check_in  || '—',
+      check_out:      b.check_out || '—',
+      status:         b.status    || 'confirmed',
+      source_channel: b.source_channel || b.channel || 'direct',
+    }));
   } catch (err) {
     showMsg('search-bookings-status', 'error', t('msg-connect-err', err.message));
     return;
@@ -528,18 +507,14 @@ async function searchBookings() {
   if (name) {
     const q = name.toLowerCase();
     rows = rows.filter(b =>
-      String(b.guest_name || '').toLowerCase().includes(q) ||
-      String(b.booking_id || '').toLowerCase().includes(q) ||
-      String(b.room_id    || '').toLowerCase().includes(q) ||
+      String(b.guest_name     || '').toLowerCase().includes(q) ||
+      String(b.booking_id     || '').toLowerCase().includes(q) ||
+      String(b.room_id        || '').toLowerCase().includes(q) ||
       String(b.source_channel || '').toLowerCase().includes(q)
     );
   }
 
-  if (!rows.length) {
-    showMsg('search-bookings-status', 'warning', t('msg-no-results'));
-    return;
-  }
-
+  if (!rows.length) { showMsg('search-bookings-status', 'warning', t('msg-no-results')); return; }
   hideMsg('search-bookings-status');
   renderBookingsTable(rows);
 }
@@ -576,8 +551,7 @@ function renderBookingsTable(rows) {
       <td>${getStatusBadge(b.status)}</td>
       <td>${b.status === 'confirmed'
         ? `<button class="action-btn cancel-bk-btn" data-id="${b.booking_id}" data-channel="${b.source_channel}">Hủy</button>`
-        : ''}
-      </td>`;
+        : ''}</td>`;
     tbody.appendChild(tr);
   });
 
@@ -608,20 +582,23 @@ function renderBookingsTable(rows) {
 document.getElementById('search-bookings-btn')?.addEventListener('click', searchBookings);
 
 // ── TAB 2: TẠO ĐẶT PHÒNG THỦ CÔNG ──────────────────────────────
-(function() {
+(function () {
   const today = new Date().toISOString().split('T')[0];
   const ci = document.getElementById('nb-check-in');
   const co = document.getElementById('nb-check-out');
   if (!ci || !co) return;
   ci.min = today; co.min = today;
-  ci.addEventListener('change', () => { co.min = ci.value; if (co.value && co.value <= ci.value) co.value = ''; });
+  ci.addEventListener('change', () => {
+    co.min = ci.value;
+    if (co.value && co.value <= ci.value) co.value = '';
+  });
 })();
 
 document.getElementById('nb-search-btn')?.addEventListener('click', async () => {
   const ci = document.getElementById('nb-check-in')?.value;
   const co = document.getElementById('nb-check-out')?.value;
   if (!ci || !co) { showMsg('nb-search-status', 'warning', t('msg-no-dates')); return; }
-  nbSearchDates = { check_in: ci, check_out: co };
+  nbSearchDates  = { check_in: ci, check_out: co };
   nbSelectedRoom = null;
   document.getElementById('nb-rooms-container').innerHTML = '';
   document.getElementById('nb-book-form')?.classList.add('hidden');
@@ -650,7 +627,8 @@ document.getElementById('nb-search-btn')?.addEventListener('click', async () => 
       const btn = e.target.closest('.btn-select'); if (!btn) return;
       const room = rooms.find(r => r.room_id === btn.dataset.id); if (!room) return;
       nbSelectedRoom = room;
-      list.querySelectorAll('.room-row').forEach(r => r.classList.toggle('selected-row', r.dataset.id === room.room_id));
+      list.querySelectorAll('.room-row').forEach(r =>
+        r.classList.toggle('selected-row', r.dataset.id === room.room_id));
       const inp = document.getElementById('nb-selected-room');
       if (inp) { inp.value = room.room_id; inp.classList.add('has-value'); }
       document.getElementById('nb-book-form')?.classList.remove('hidden');
@@ -681,7 +659,6 @@ document.getElementById('nb-book-btn')?.addEventListener('click', async () => {
   setBusy('nb-book-btn', true);
   showMsg('nb-book-status', 'loading', t('msg-booking'));
   document.getElementById('nb-booking-result')?.classList.add('hidden');
-
   try {
     const { ok, status, data } = await callFn('create_booking', {
       room_id: roomId, check_in: nbSearchDates.check_in, check_out: nbSearchDates.check_out,
@@ -690,11 +667,13 @@ document.getElementById('nb-book-btn')?.addEventListener('click', async () => {
       guest: guests[0], guests,
     });
     if (status === 409) { showMsg('nb-book-status', 'error', t('msg-conflict')); return; }
-    if (!ok) { showMsg('nb-book-status', 'error', data.error || 'Error'); return; }
+    if (!ok)            { showMsg('nb-book-status', 'error', data.error || 'Error'); return; }
     showMsg('nb-book-status', 'success', t('msg-book-success'));
     const panel = document.getElementById('nb-booking-result');
     if (panel) {
-      panel.innerHTML = `<div class="bp-label">${t('bp-label')}</div><div class="bp-code">${data.booking_id}</div>
+      panel.innerHTML = `
+        <div class="bp-label">${t('bp-label')}</div>
+        <div class="bp-code">${data.booking_id}</div>
         <div class="bp-detail">${roomId} · ${name} · ${nbSearchDates.check_in} → ${nbSearchDates.check_out}</div>`;
       panel.classList.remove('hidden');
     }
@@ -705,12 +684,15 @@ document.getElementById('nb-book-btn')?.addEventListener('click', async () => {
 });
 
 // ── TAB 3: TRA CỨU NHANH PHÒNG TRỐNG ───────────────────────────
-(function() {
+(function () {
   const today = new Date().toISOString().split('T')[0];
   const ci = document.getElementById('av-check-in'), co = document.getElementById('av-check-out');
   if (!ci || !co) return;
   ci.min = today; co.min = today;
-  ci.addEventListener('change', () => { co.min = ci.value; if (co.value && co.value <= ci.value) co.value = ''; });
+  ci.addEventListener('change', () => {
+    co.min = ci.value;
+    if (co.value && co.value <= ci.value) co.value = '';
+  });
 })();
 
 document.getElementById('av-search-btn')?.addEventListener('click', async () => {
@@ -741,22 +723,19 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (LOAD GIÁ ĐỘNG KHÔNG LỖI) ─────────
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ ────────────────────────────────────
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
   sel.innerHTML = `<option value="">${t('loading-types')}</option>`;
-  
   let types = [];
   try {
     const rows = await restGet('room', '?select=room_type');
     types = [...new Set((rows || []).map(r => r.room_type))].filter(Boolean).sort();
-  } catch (err) {
+  } catch {
     types = DEFAULT_ROOM_TYPES;
   }
-
   if (!types.length) types = DEFAULT_ROOM_TYPES;
-
   sel.innerHTML = `<option value="">${t('select-type-opt')}</option>`;
   types.forEach(rt => {
     const opt = document.createElement('option');
@@ -790,24 +769,19 @@ async function loadCurrentRates(roomType) {
   const inp = document.getElementById('rate-base-input');
   if (inp) inp.placeholder = t('msg-loading');
 
-  const channelMap = {
-    direct: 'price-direct',
-    ota_1:  'price-ota1',
-    ota_2:  'price-ota2',
-    gds:    'price-gds'
-  };
+  const channelMap = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
 
   try {
     let baseRate = null;
     let rows = [];
 
-    // 1. Thử gọi trực tiếp view v_channel_rates
+    // 1. Thử view v_channel_rates
     try {
       rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
       if (!rows || rows.length === 0) {
         rows = await restGet('v_channel_rates', `?room_type=ilike.${encodeURIComponent(roomType.trim())}`);
       }
-    } catch (e) {}
+    } catch {}
 
     if (rows && rows.length > 0) {
       rows.forEach(r => {
@@ -822,32 +796,29 @@ async function loadCurrentRates(roomType) {
           baseRate = Number(r.base_rate);
         }
       });
-
       if (baseRate && inp) {
-        inp.value = baseRate;
-        currentBaseRate = baseRate;
+        inp.value = baseRate; currentBaseRate = baseRate;
         inp.placeholder = '4000000';
         return;
       }
     }
 
-    // 2. Thử lấy phòng có giá hợp lệ đầu tiên từ bảng room
+    // 2. Lấy rate_low từ bảng room
     try {
-      const roomRows = await restGet('room', `?room_type=eq.${encodeURIComponent(roomType.trim())}&rate_low=gt.0&select=rate_low&limit=1`);
+      const roomRows = await restGet('room',
+        `?room_type=eq.${encodeURIComponent(roomType.trim())}&rate_low=gt.0&select=rate_low&limit=1`);
       if (roomRows && roomRows.length > 0 && Number(roomRows[0].rate_low) > 0) {
         baseRate = Number(roomRows[0].rate_low);
       }
-    } catch (e2) {}
+    } catch {}
 
-    // 3. Fallback theo bảng Base Rate chuẩn của Lụa Vàng Resort (không bao giờ rỗng)
+    // 3. Fallback bảng chuẩn
     if (!baseRate) {
-      const normKey = roomType.toLowerCase().trim();
-      baseRate = DEFAULT_ROOM_BASE_RATES[normKey] || 4800000;
+      baseRate = DEFAULT_ROOM_BASE_RATES[roomType.toLowerCase().trim()] || 4800000;
     }
 
-    inp.value = baseRate;
+    if (inp) { inp.value = baseRate; inp.placeholder = '4000000'; }
     currentBaseRate = baseRate;
-    inp.placeholder = '4000000';
     updateChannelRateCards(baseRate);
 
   } catch (err) {
@@ -856,37 +827,39 @@ async function loadCurrentRates(roomType) {
   }
 }
 
-document.getElementById('rate-room-type')?.addEventListener('change', async function() {
+document.getElementById('rate-room-type')?.addEventListener('change', async function () {
   const rt = this.value;
   currentRoomTypeRate = rt || null;
   hideMsg('rate-status');
   if (!rt) {
     resetRateCards();
     const container = document.getElementById('rate-history-container');
-    if (container) {
-      container.innerHTML = `<div class="no-results">${t('select-type-first')}</div>`;
-    }
+    if (container) container.innerHTML = `<div class="no-results">${t('select-type-first')}</div>`;
     return;
   }
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
 });
 
+// ── UPDATE BASE RATE ──────────────────────────────────────────
+// FIX: changed_by gửi DEMO_STAFF_UUID (UUID hợp lệ) xuống DB
+//      thay vì string "Revenue Manager" — tránh lỗi "must be a valid UUID or null"
 document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
   if (isUpdatingRate) return;
 
   const roomType    = (document.getElementById('rate-room-type')?.value || '').trim();
   const newBaseRate = Number(document.getElementById('rate-base-input')?.value);
-  const changedBy   = (document.getElementById('rate-changed-by')?.value || 'Revenue Manager').trim();
 
-  if (!roomType) { 
-    showMsg('rate-status', 'warning', t('msg-no-type')); 
-    return; 
-  }
-  if (!newBaseRate || newBaseRate < 100000) { 
-    showMsg('rate-status', 'warning', t('msg-no-rate')); 
-    return; 
-  }
+  // changed_by: gửi UUID, không gửi string hiển thị từ input
+  const changedBy = DEMO_STAFF_UUID;
 
+  if (!roomType) {
+    showMsg('rate-status', 'warning', t('msg-no-type'));
+    return;
+  }
+  if (!newBaseRate || newBaseRate < 100000) {
+    showMsg('rate-status', 'warning', t('msg-no-rate'));
+    return;
+  }
   if (currentBaseRate !== null && newBaseRate === currentBaseRate) {
     showMsg('rate-status', 'warning', t('msg-same-rate'));
     return;
@@ -900,7 +873,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     const { ok, data } = await callFn('update_base_rate', {
       room_type:     roomType,
       new_base_rate: newBaseRate,
-      changed_by:    changedBy
+      changed_by:    changedBy,   // UUID
     });
 
     if (!ok) {
@@ -911,8 +884,8 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
     currentBaseRate = newBaseRate;
     updateChannelRateCards(newBaseRate);
-
     await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
+
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
   } finally {
@@ -921,6 +894,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
   }
 });
 
+// ── RATE HISTORY ──────────────────────────────────────────────
 async function loadRateHistory(roomType) {
   const container = document.getElementById('rate-history-container');
   if (!container) return;
@@ -947,17 +921,19 @@ async function loadRateHistory(roomType) {
     container.innerHTML = ''; container.appendChild(wrap);
     const tbody = document.getElementById('history-tbody');
     rows.forEach(r => {
-      const d = r.changed_at ? new Date(r.changed_at).toLocaleString(currentLang === 'en' ? 'en-US' : 'vi-VN') : '—';
+      const d = r.changed_at
+        ? new Date(r.changed_at).toLocaleString(currentLang === 'en' ? 'en-US' : 'vi-VN')
+        : '—';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${r.room_type}</td>
         <td style="color:var(--muted)">${r.old_base_rate ? vndFmt(r.old_base_rate) : '—'}</td>
         <td style="color:var(--forest);font-weight:500">${r.new_base_rate ? vndFmt(r.new_base_rate) : '—'}</td>
-        <td style="font-size:0.77rem;color:var(--muted)">${r.changed_by || 'Revenue Manager'}</td>
+        <td style="font-size:0.77rem;color:var(--muted)">${changedByLabel(r.changed_by)}</td>
         <td style="font-size:0.77rem;color:var(--muted)">${d}</td>`;
       tbody.appendChild(tr);
     });
-  } catch (err) {
+  } catch {
     container.innerHTML = `<div class="no-results">${t('no-history')}</div>`;
   }
 }
