@@ -1,7 +1,7 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Fix: Truyền chuẩn UUID cho changed_by, UI vẫn giữ Revenue Manager
+   Update: Khắc phục triệt để luồng PIN Auth & Ép xóa Overlay
    ============================================================ */
 
 const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -369,22 +369,30 @@ function initLang() {
   applyLanguage(saved);
 }
 
-// ── PIN AUTHENTICATION (TOÀN CỤC — CHỐNG KẸT OVERLAY) ──────────
-window.showApp = function() {
+// ── PIN AUTHENTICATION (XỬ LÝ DỨT ĐIỂM SỰ KIỆN CLICK & ENTER) ───
+function unlockStaffPortal() {
   const overlay = document.getElementById('pin-overlay');
   if (overlay) {
     overlay.style.setProperty('display', 'none', 'important');
     overlay.classList.add('hidden');
-    setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 100);
+    // Xóa thẻ khỏi DOM để không cản trở thao tác click trên trang
+    try { overlay.remove(); } catch (err) { overlay.parentNode?.removeChild(overlay); }
   }
 
-  try { loadDashboardStats(); } catch (e) { console.error(e); }
-  try { loadRoomTypes(); }      catch (e) { console.error(e); }
-  try { searchBookings(); }     catch (e) { console.error(e); }
-};
+  // Khởi động các module độc lập không gây nghẽn app
+  setTimeout(() => {
+    try { loadDashboardStats(); } catch (e) { console.error("Stats err:", e); }
+    try { loadRoomTypes(); }      catch (e) { console.error("Room types err:", e); }
+    try { searchBookings(); }     catch (e) { console.error("Bookings err:", e); }
+  }, 50);
+}
 
-window.handleStaffLogin = function(e) {
-  if (e && e.preventDefault) e.preventDefault();
+function performLoginAttempt(e) {
+  if (e) {
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
+  }
+
   const input = document.getElementById('pin-input');
   const card  = document.getElementById('pin-card');
   const entered = (input?.value || '').trim();
@@ -392,7 +400,7 @@ window.handleStaffLogin = function(e) {
   if (entered === STAFF_PIN) {
     try { sessionStorage.setItem('staff_auth', STAFF_PIN); } catch {}
     hideMsg('pin-msg');
-    window.showApp();
+    unlockStaffPortal();
   } else {
     showMsg('pin-msg', 'error', currentLang === 'en' ? 'Invalid PIN code.' : 'Mã PIN không chính xác.');
     if (card) {
@@ -405,22 +413,40 @@ window.handleStaffLogin = function(e) {
       input.focus();
     }
   }
-};
-
-window.handleStaffLogout = function() {
-  try { sessionStorage.removeItem('staff_auth'); } catch {}
-  window.location.reload();
-};
+}
 
 function initPin() {
+  const overlay = document.getElementById('pin-overlay');
+  const input   = document.getElementById('pin-input');
+  const pinBtn  = document.getElementById('pin-btn');
+
+  // Đã xác thực trong phiên làm việc
   if (sessionStorage.getItem('staff_auth') === STAFF_PIN) {
-    window.showApp();
+    unlockStaffPortal();
     return;
   }
-  const input = document.getElementById('pin-input');
+
+  // Đăng ký sự kiện an toàn
+  if (pinBtn) {
+    pinBtn.onclick = performLoginAttempt;
+  }
+
   if (input) {
     input.value = '';
-    setTimeout(() => input.focus(), 200);
+    input.onkeydown = function(e) {
+      if (e.key === 'Enter') {
+        performLoginAttempt(e);
+      }
+    };
+    setTimeout(() => { input.focus(); }, 150);
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.onclick = function() {
+      try { sessionStorage.removeItem('staff_auth'); } catch {}
+      window.location.reload();
+    };
   }
 }
 
@@ -556,7 +582,7 @@ function renderBookingsTable(rows) {
       <td>${getChannelBadge(b.source_channel)}</td>
       <td>${getStatusBadge(b.status)}</td>
       <td>${b.status === 'confirmed'
-        ? `<button class="action-btn cancel-bk-btn" data-id="${b.booking_id}" data-channel="${b.source_channel}">Hủy</button>`
+        ? `<button type="button" class="action-btn cancel-bk-btn" data-id="${b.booking_id}" data-channel="${b.source_channel}">Hủy</button>`
         : ''}
       </td>`;
     tbody.appendChild(tr);
@@ -623,7 +649,7 @@ document.getElementById('nb-search-btn')?.addEventListener('click', async () => 
           <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} khách</div>
         </div>
         <div class="room-rate">${rateStr(room.rate_low, room.rate_high)}</div>
-        <button class="btn-select" data-id="${room.room_id}">${t('btn-pick')}</button>`;
+        <button type="button" class="btn-select" data-id="${room.room_id}">${t('btn-pick')}</button>`;
       list.appendChild(row);
     });
     container.appendChild(list);
@@ -722,7 +748,7 @@ document.getElementById('av-search-btn')?.addEventListener('click', async () => 
   } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
 });
 
-// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (LOAD GIÁ ĐỘNG KHÔNG LỖI) ─────────
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ ───────────────────────────────────
 async function loadRoomTypes() {
   const sel = document.getElementById('rate-room-type');
   if (!sel) return;
@@ -782,7 +808,6 @@ async function loadCurrentRates(roomType) {
     let baseRate = null;
     let rows = [];
 
-    // 1. Thử gọi trực tiếp view v_channel_rates
     try {
       rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
       if (!rows || rows.length === 0) {
@@ -812,7 +837,6 @@ async function loadCurrentRates(roomType) {
       }
     }
 
-    // 2. Thử lấy phòng có giá hợp lệ đầu tiên từ bảng room
     try {
       const roomRows = await restGet('room', `?room_type=eq.${encodeURIComponent(roomType.trim())}&rate_low=gt.0&select=rate_low&limit=1`);
       if (roomRows && roomRows.length > 0 && Number(roomRows[0].rate_low) > 0) {
@@ -820,7 +844,6 @@ async function loadCurrentRates(roomType) {
       }
     } catch (e2) {}
 
-    // 3. Fallback theo bảng Base Rate chuẩn của Lụa Vàng Resort
     if (!baseRate) {
       const normKey = roomType.toLowerCase().trim();
       baseRate = DEFAULT_ROOM_BASE_RATES[normKey] || 4800000;
@@ -852,7 +875,6 @@ document.getElementById('rate-room-type')?.addEventListener('change', async func
   await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
 });
 
-// SỬA: Truyền chuẩn DEMO_STAFF_UUID vào payload changed_by
 document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
   if (isUpdatingRate) return;
 
@@ -868,7 +890,6 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     return; 
   }
 
-  // Chặn ghi log trùng
   if (currentBaseRate !== null && newBaseRate === currentBaseRate) {
     showMsg('rate-status', 'warning', t('msg-same-rate'));
     return;
@@ -882,7 +903,7 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     const { ok, data } = await callFn('update_base_rate', {
       room_type:     roomType,
       new_base_rate: newBaseRate,
-      changed_by:    DEMO_STAFF_UUID // Truyền UUID hợp lệ
+      changed_by:    DEMO_STAFF_UUID
     });
 
     if (!ok) {
@@ -931,7 +952,6 @@ async function loadRateHistory(roomType) {
     rows.forEach(r => {
       const d = r.changed_at ? new Date(r.changed_at).toLocaleString(currentLang === 'en' ? 'en-US' : 'vi-VN') : '—';
       
-      // Hiển thị Revenue Manager nếu là demo UUID hoặc hiển thị text đẹp
       let displayChangedBy = 'Revenue Manager';
       if (r.changed_by && r.changed_by !== DEMO_STAFF_UUID) {
         displayChangedBy = r.changed_by.length > 8 ? `${r.changed_by.substring(0, 8)}…` : r.changed_by;
@@ -955,7 +975,15 @@ document.getElementById('refresh-history-btn')?.addEventListener('click', () => 
   if (currentRoomTypeRate) loadRateHistory(currentRoomTypeRate);
 });
 
-// ── KHỞI CHẠY HỆ THỐNG ────────────────────────────────────────
-initPin();
-initLang();
-initTabs();
+// ── KHỞI CHẠY TỰ ĐỘNG KHI TẢI XONG TRANG ───────────────────────
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initPin();
+    initLang();
+    initTabs();
+  });
+} else {
+  initPin();
+  initLang();
+  initTabs();
+}
