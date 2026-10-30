@@ -1,6 +1,6 @@
 /* ============================================================
    STAYASIA — OTA 2 (ota2.js)
-   Channel: ota_2 | Multiplier: 1.05 (+5%)
+   Channel: ota_2 | Hệ số hoa hồng kênh: × 1.05 (+5%)
    ============================================================ */
 
 const SUPABASE_URL   = "https://scxjezoysmwyumyebuls.supabase.co";
@@ -44,34 +44,60 @@ async function callFn(name, body) {
 function vnd(n) { return Number(n).toLocaleString('vi-VN') + ' ₫'; }
 
 async function fetchChannelRates() {
+  channelRatesCache = {};
   try {
-    const rows = await restGet('v_channel_rates', `?or=(channel_code.eq.${SOURCE_CHANNEL},channel.eq.${SOURCE_CHANNEL})`);
-    if (rows && rows.length > 0) {
-      rows.forEach(r => {
-        const key = String(r.room_type || '').toLowerCase().trim();
-        const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
-        if (price > 0) {
-          channelRatesCache[key] = price;
-          const alt = ROOM_TYPE_MAP[r.room_type];
-          if (alt) channelRatesCache[alt.toLowerCase().trim()] = price;
-        }
-      });
-    }
-    const rtRows = await restGet('room_types', '?select=room_type,base_rate');
-    if (rtRows && rtRows.length > 0) {
-      rtRows.forEach(rt => {
-        const key = String(rt.room_type || '').toLowerCase().trim();
-        const bPrice = Number(rt.base_rate || 0);
-        if (bPrice > 0 && !channelRatesCache[key]) {
-          const otaPrice = Math.round(bPrice * CHANNEL_MULT);
-          channelRatesCache[key] = otaPrice;
-          const alt = ROOM_TYPE_MAP[rt.room_type];
-          if (alt) channelRatesCache[alt.toLowerCase().trim()] = otaPrice;
-        }
-      });
-    }
-  } catch (e) {
-    console.warn("OTA2 rate load warn:", e.message);
+    // 1. Lấy từ v_channel_rates
+    try {
+      const rows = await restGet('v_channel_rates', `?or=(channel_code.eq.${SOURCE_CHANNEL},channel.eq.${SOURCE_CHANNEL})`);
+      if (rows && rows.length > 0) {
+        rows.forEach(r => {
+          const key = String(r.room_type || '').toLowerCase().trim();
+          const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+          if (price > 0) {
+            channelRatesCache[key] = price;
+            const alt = ROOM_TYPE_MAP[r.room_type];
+            if (alt) channelRatesCache[alt.toLowerCase().trim()] = price;
+          }
+        });
+      }
+    } catch (_eView) {}
+
+    // 2. Lấy Base Rate mới nhất từ room_types
+    try {
+      const rtRows = await restGet('room_types', '?select=room_type,base_rate');
+      if (rtRows && rtRows.length > 0) {
+        rtRows.forEach(rt => {
+          const key = String(rt.room_type || '').toLowerCase().trim();
+          const basePrice = Number(rt.base_rate || 0);
+          if (basePrice > 0) {
+            const calculatedOTA = Math.round(basePrice * CHANNEL_MULT);
+            channelRatesCache[key] = calculatedOTA;
+            const alt = ROOM_TYPE_MAP[rt.room_type];
+            if (alt) channelRatesCache[alt.toLowerCase().trim()] = calculatedOTA;
+          }
+        });
+      }
+    } catch (_eRt) {}
+
+    // 3. Dự phòng rate_history
+    try {
+      const histRows = await restGet('rate_history', '?order=changed_at.desc&limit=20');
+      if (histRows && histRows.length > 0) {
+        histRows.forEach(h => {
+          const key = String(h.room_type || '').toLowerCase().trim();
+          const basePrice = Number(h.new_base_rate || 0);
+          if (basePrice > 0 && !channelRatesCache[key]) {
+            const calculatedOTA = Math.round(basePrice * CHANNEL_MULT);
+            channelRatesCache[key] = calculatedOTA;
+            const alt = ROOM_TYPE_MAP[h.room_type];
+            if (alt) channelRatesCache[alt.toLowerCase().trim()] = calculatedOTA;
+          }
+        });
+      }
+    } catch (_eHist) {}
+
+  } catch (err) {
+    console.warn("Lỗi nạp giá OTA 2:", err.message);
   }
 }
 
@@ -137,7 +163,7 @@ document.getElementById('search-btn')?.addEventListener('click', async () => {
   showMsg('search-status', 'loading', 'Đang kiểm tra phòng trống…');
 
   try {
-    await fetchChannelRates();
+    await fetchChannelRates(); // Luôn lấy giá mới nhất
 
     const { ok, data } = await callFn('check_availability', {
       check_in: ci, check_out: co, source_channel: SOURCE_CHANNEL
@@ -247,10 +273,6 @@ document.getElementById('cancel-btn')?.addEventListener('click', async () => {
   } finally {
     setBusy('cancel-btn', false);
   }
-});
-
-window.addEventListener('storage', (e) => {
-  if (e.key === 'crs_rate_updated') fetchChannelRates();
 });
 
 fetchChannelRates();
