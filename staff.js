@@ -1,16 +1,20 @@
 /* ============================================================
    LỤA VÀNG RESORT & SPA — STAFF PORTAL
    staff.js  |  Production Grade PMS/CRS Logic
-   Fix: Khai báo DEFAULT_ROOM_BASE_RATES & Khớp chuẩn Edge Function Thẻ 3
    ============================================================ */
 
-const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
-const ANON_KEY     = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
-const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
-const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
-const STAFF_PIN    = "2026";
+// 1. KHAI BÁO BIẾN TOÀN CỤC NGAY ĐẦU FILE
+window.DEFAULT_ROOM_BASE_RATES = {
+  "deluxe ocean view":           5200000,
+  "premier garden view":          4800000,
+  "junior suite lagoon":         7500000,
+  "lantern pool villa":          11500000,
+  "two-bedroom beachfront villa": 14500000,
+  "presidential silk villa":     28000000
+};
 
-// Danh mục 6 hạng phòng chuẩn khớp 100% database inventory
+const DEFAULT_ROOM_BASE_RATES = window.DEFAULT_ROOM_BASE_RATES;
+
 const DEFAULT_ROOM_TYPES = [
   "Deluxe Ocean View",
   "Premier Garden View",
@@ -20,15 +24,11 @@ const DEFAULT_ROOM_TYPES = [
   "Presidential Silk Villa"
 ];
 
-// Khai báo bảng Base Rate chuẩn để fallback không bao giờ bị undefined
-const DEFAULT_ROOM_BASE_RATES = {
-  "deluxe ocean view":           5200000,
-  "premier garden view":          4800000,
-  "junior suite lagoon":         7500000,
-  "lantern pool villa":          11500000,
-  "two-bedroom beachfront villa": 14500000,
-  "presidential silk villa":     28000000
-};
+const SUPABASE_URL = "https://scxjezoysmwyumyebuls.supabase.co";
+const ANON_KEY     = "sb_publishable_rXMZpqv_C-N3ojDXI5xNKA_3L_0oD8w";
+const FN_BASE      = `${SUPABASE_URL}/functions/v1`;
+const REST_BASE    = `${SUPABASE_URL}/rest/v1`;
+const STAFF_PIN    = "2026";
 
 // ── BỘ TỪ ĐIỂN SONG NGỮ VI / EN ──────────────────────────────
 const I18N = {
@@ -372,4 +372,619 @@ function unlockStaffPortal() {
   if (overlay) {
     overlay.style.setProperty('display', 'none', 'important');
     overlay.classList.add('hidden');
-    try { overlay.remove(); } catch (err) { overlay.parentNode
+    try { overlay.remove(); } catch (err) { overlay.parentNode?.removeChild(overlay); }
+  }
+
+  setTimeout(() => {
+    try { loadDashboardStats(); } catch (e) { console.error("Stats err:", e); }
+    try { loadRoomTypes(); }      catch (e) { console.error("Room types err:", e); }
+    try { searchBookings(); }     catch (e) { console.error("Bookings err:", e); }
+  }, 50);
+}
+
+function performLoginAttempt(e) {
+  if (e) {
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
+  }
+
+  const input = document.getElementById('pin-input');
+  const card  = document.getElementById('pin-card');
+  const entered = (input?.value || '').trim();
+
+  if (entered === STAFF_PIN) {
+    try { sessionStorage.setItem('staff_auth', STAFF_PIN); } catch {}
+    hideMsg('pin-msg');
+    unlockStaffPortal();
+  } else {
+    showMsg('pin-msg', 'error', currentLang === 'en' ? 'Invalid PIN code.' : 'Mã PIN không chính xác.');
+    if (card) {
+      card.classList.remove('shake');
+      void card.offsetWidth;
+      card.classList.add('shake');
+    }
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
+}
+
+function initPin() {
+  if (sessionStorage.getItem('staff_auth') === STAFF_PIN) {
+    unlockStaffPortal();
+    return;
+  }
+
+  const input  = document.getElementById('pin-input');
+  const pinBtn = document.getElementById('pin-btn');
+
+  if (pinBtn) pinBtn.onclick = performLoginAttempt;
+
+  if (input) {
+    input.value = '';
+    input.onkeydown = function(e) {
+      if (e.key === 'Enter') performLoginAttempt(e);
+    };
+    setTimeout(() => { input.focus(); }, 150);
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.onclick = function() {
+      try { sessionStorage.removeItem('staff_auth'); } catch {}
+      window.location.reload();
+    };
+  }
+}
+
+// ── TABS ───────────────────────────────────────────────────────
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${id}`)?.classList.add('active');
+    });
+  });
+}
+
+// ── DASHBOARD STATS ─────────────────────────────────────────────
+async function loadDashboardStats() {
+  const today = new Date().toISOString().split('T')[0];
+
+  const results = await Promise.allSettled([
+    restGet('booking', `?check_in=eq.${today}&status=eq.confirmed&select=booking_id`),
+    restGet('booking', `?check_out=eq.${today}&status=in.(confirmed,checked_in)&select=booking_id`),
+    restGet('booking', `?check_in=lte.${today}&check_out=gt.${today}&status=eq.confirmed&select=booking_id`),
+    restGet('room', '?select=room_id')
+  ]);
+
+  const arrivals   = results[0].status === 'fulfilled' ? results[0].value : [];
+  const departures = results[1].status === 'fulfilled' ? results[1].value : [];
+  const occupied   = results[2].status === 'fulfilled' ? results[2].value : [];
+  const allRooms   = results[3].status === 'fulfilled' ? results[3].value : [];
+
+  const occCount   = Array.isArray(occupied) ? occupied.length : 0;
+  const totalRooms = Array.isArray(allRooms) && allRooms.length > 0 ? allRooms.length : 180;
+
+  document.getElementById('stat-arrivals').textContent   = Array.isArray(arrivals) ? arrivals.length : '0';
+  document.getElementById('stat-departures').textContent = Array.isArray(departures) ? departures.length : '0';
+  document.getElementById('stat-occupied').textContent   = occCount;
+  document.getElementById('stat-available').textContent  = Math.max(0, totalRooms - occCount);
+}
+
+// ── TAB 1: QUẢN LÝ BOOKING ─────────────────────────────────────
+async function searchBookings() {
+  const name     = (document.getElementById('search-name')?.value     || '').trim();
+  const dateFrom = document.getElementById('search-date-from')?.value || '';
+  const dateTo   = document.getElementById('search-date-to')?.value   || '';
+  const status   = document.getElementById('search-status')?.value    || '';
+
+  showMsg('search-bookings-status', 'loading', t('msg-searching'));
+  document.getElementById('bookings-table-container').innerHTML = '';
+
+  let filterQuery = '';
+  if (status)   filterQuery += `&status=eq.${status}`;
+  if (dateFrom) filterQuery += `&check_in=gte.${dateFrom}`;
+  if (dateTo)   filterQuery += `&check_out=lte.${dateTo}`;
+
+  let rows = [];
+
+  try {
+    const raw = await restGet('booking', `?select=*&order=check_in.desc&limit=100${filterQuery}`);
+    
+    rows = (raw || []).map(b => {
+      const guestName = b.guest_name 
+                     || b.guest?.guest_name 
+                     || b.guest_id 
+                     || 'Khách lưu trú';
+
+      const ch = b.source_channel || b.channel || 'direct';
+
+      return {
+        booking_id:     b.booking_id || b.id || '—',
+        room_id:        b.room_id || '—',
+        guest_name:     guestName,
+        check_in:       b.check_in || '—',
+        check_out:      b.check_out || '—',
+        status:         b.status || 'confirmed',
+        source_channel: ch,
+      };
+    });
+
+  } catch (err) {
+    showMsg('search-bookings-status', 'error', t('msg-connect-err', err.message));
+    return;
+  }
+
+  if (name) {
+    const q = name.toLowerCase();
+    rows = rows.filter(b =>
+      String(b.guest_name || '').toLowerCase().includes(q) ||
+      String(b.booking_id || '').toLowerCase().includes(q) ||
+      String(b.room_id    || '').toLowerCase().includes(q) ||
+      String(b.source_channel || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (!rows.length) {
+    showMsg('search-bookings-status', 'warning', t('msg-no-results'));
+    return;
+  }
+
+  hideMsg('search-bookings-status');
+  renderBookingsTable(rows);
+}
+
+function renderBookingsTable(rows) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bookings-table-wrap';
+  wrap.innerHTML = `
+    <table class="bookings-table">
+      <thead><tr>
+        <th>${t('table-th-id')}</th>
+        <th>${t('table-th-room')}</th>
+        <th>${t('table-th-guest')}</th>
+        <th>${t('table-th-checkin')}</th>
+        <th>${t('table-th-checkout')}</th>
+        <th>${t('table-th-channel')}</th>
+        <th>${t('table-th-status')}</th>
+        <th>${t('table-th-actions')}</th>
+      </tr></thead>
+      <tbody id="bookings-tbody"></tbody>
+    </table>`;
+  document.getElementById('bookings-table-container').appendChild(wrap);
+
+  const tbody = document.getElementById('bookings-tbody');
+  rows.forEach(b => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="col-id">${b.booking_id}</td>
+      <td><strong>${b.room_id}</strong></td>
+      <td>${b.guest_name}</td>
+      <td>${b.check_in}</td>
+      <td>${b.check_out}</td>
+      <td>${getChannelBadge(b.source_channel)}</td>
+      <td>${getStatusBadge(b.status)}</td>
+      <td>${b.status === 'confirmed'
+        ? `<button type="button" class="action-btn cancel-bk-btn" data-id="${b.booking_id}" data-channel="${b.source_channel}">Hủy</button>`
+        : ''}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbody.addEventListener('click', async e => {
+    const btn = e.target.closest('.cancel-bk-btn');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const ch = btn.dataset.channel || 'direct';
+    if (!window.confirm(t('confirm-cancel', id))) return;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const { ok, data } = await callFn('cancel_booking', { booking_id: id, source_channel: ch });
+      if (ok) {
+        showMsg('search-bookings-status', 'success', t('msg-cancel-ok', id));
+        searchBookings();
+        loadDashboardStats();
+      } else {
+        showMsg('search-bookings-status', 'error', data.error || 'Lỗi xử lý');
+        btn.disabled = false; btn.textContent = 'Hủy';
+      }
+    } catch (err) {
+      showMsg('search-bookings-status', 'error', t('msg-connect-err', err.message));
+      btn.disabled = false; btn.textContent = 'Hủy';
+    }
+  });
+}
+
+document.getElementById('search-bookings-btn')?.addEventListener('click', searchBookings);
+
+// ── TAB 2: TẠO ĐẶT PHÒNG THỦ CÔNG ──────────────────────────────
+(function() {
+  const today = new Date().toISOString().split('T')[0];
+  const ci = document.getElementById('nb-check-in');
+  const co = document.getElementById('nb-check-out');
+  if (!ci || !co) return;
+  ci.min = today; co.min = today;
+  ci.addEventListener('change', () => { co.min = ci.value; if (co.value && co.value <= ci.value) co.value = ''; });
+})();
+
+document.getElementById('nb-search-btn')?.addEventListener('click', async () => {
+  const ci = document.getElementById('nb-check-in')?.value;
+  const co = document.getElementById('nb-check-out')?.value;
+  if (!ci || !co) { showMsg('nb-search-status', 'warning', t('msg-no-dates')); return; }
+  nbSearchDates = { check_in: ci, check_out: co };
+  nbSelectedRoom = null;
+  document.getElementById('nb-rooms-container').innerHTML = '';
+  document.getElementById('nb-book-form')?.classList.add('hidden');
+  showMsg('nb-search-status', 'loading', t('msg-loading'));
+  try {
+    const { ok, data } = await callFn('check_availability', { check_in: ci, check_out: co });
+    if (!ok) { showMsg('nb-search-status', 'error', data.error || 'Error'); return; }
+    const rooms = data.available_rooms || [];
+    if (!rooms.length) { showMsg('nb-search-status', 'warning', t('msg-no-avail-rooms')); return; }
+    showMsg('nb-search-status', 'success', t('msg-found-rooms', rooms.length));
+    const container = document.getElementById('nb-rooms-container');
+    const list = document.createElement('div'); list.className = 'room-list';
+    rooms.forEach(room => {
+      const row = document.createElement('div'); row.className = 'room-row'; row.dataset.id = room.room_id;
+      row.innerHTML = `
+        <div class="room-info">
+          <h4>${room.room_type} &mdash; <span style="font-family:var(--sans);font-size:0.85rem">${room.room_id}</span></h4>
+          <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} khách</div>
+        </div>
+        <div class="room-rate">${rateStr(room.rate_low, room.rate_high)}</div>
+        <button type="button" class="btn-select" data-id="${room.room_id}">${t('btn-pick')}</button>`;
+      list.appendChild(row);
+    });
+    container.appendChild(list);
+    list.addEventListener('click', e => {
+      const btn = e.target.closest('.btn-select'); if (!btn) return;
+      const room = rooms.find(r => r.room_id === btn.dataset.id); if (!room) return;
+      nbSelectedRoom = room;
+      list.querySelectorAll('.room-row').forEach(r => r.classList.toggle('selected-row', r.dataset.id === room.room_id));
+      const inp = document.getElementById('nb-selected-room');
+      if (inp) { inp.value = room.room_id; inp.classList.add('has-value'); }
+      document.getElementById('nb-book-form')?.classList.remove('hidden');
+      document.getElementById('nb-book-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  } catch (err) { showMsg('nb-search-status', 'error', t('msg-connect-err', err.message)); }
+});
+
+document.getElementById('nb-book-btn')?.addEventListener('click', async () => {
+  const roomId = (document.getElementById('nb-selected-room')?.value || '').trim();
+  const name   = (document.getElementById('nb-guest-name')?.value   || '').trim();
+  const email  = (document.getElementById('nb-guest-email')?.value  || '').trim();
+  const phone  = (document.getElementById('nb-guest-phone')?.value  || '').trim();
+  const extra  = (document.getElementById('nb-extra-guests')?.value || '').trim();
+
+  if (!roomId) { showMsg('nb-book-status', 'warning', t('msg-no-room-sel')); return; }
+  if (!name)   { showMsg('nb-book-status', 'warning', t('msg-no-guest'));    return; }
+  if (!nbSearchDates.check_in) { showMsg('nb-book-status', 'warning', t('msg-no-dates')); return; }
+
+  const guests = [{ guest_name: name, email: email || null, phone: phone || null }];
+  if (extra) {
+    extra.split(/;|\n/).map(s => s.trim()).filter(Boolean).forEach(line => {
+      const [n, em, ph] = line.split(',').map(s => s.trim());
+      if (n) guests.push({ guest_name: n, email: em || null, phone: ph || null });
+    });
+  }
+
+  setBusy('nb-book-btn', true);
+  showMsg('nb-book-status', 'loading', t('msg-booking'));
+  document.getElementById('nb-booking-result')?.classList.add('hidden');
+
+  try {
+    const { ok, status, data } = await callFn('create_booking', {
+      room_id: roomId, check_in: nbSearchDates.check_in, check_out: nbSearchDates.check_out,
+      source_channel: 'direct',
+      guest_name: name, email: email || null, phone: phone || null,
+      guest: guests[0], guests,
+    });
+    if (status === 409) { showMsg('nb-book-status', 'error', t('msg-conflict')); return; }
+    if (!ok) { showMsg('nb-book-status', 'error', data.error || 'Error'); return; }
+    showMsg('nb-book-status', 'success', t('msg-book-success'));
+    const panel = document.getElementById('nb-booking-result');
+    if (panel) {
+      panel.innerHTML = `<div class="bp-label">${t('bp-label')}</div><div class="bp-code">${data.booking_id}</div>
+        <div class="bp-detail">${roomId} · ${name} · ${nbSearchDates.check_in} → ${nbSearchDates.check_out}</div>`;
+      panel.classList.remove('hidden');
+    }
+    loadDashboardStats();
+    searchBookings();
+  } catch (err) { showMsg('nb-book-status', 'error', t('msg-connect-err', err.message)); }
+  finally { setBusy('nb-book-btn', false); }
+});
+
+// ── TAB 3: TRA CỨU NHANH PHÒNG TRỐNG ───────────────────────────
+(function() {
+  const today = new Date().toISOString().split('T')[0];
+  const ci = document.getElementById('av-check-in'), co = document.getElementById('av-check-out');
+  if (!ci || !co) return;
+  ci.min = today; co.min = today;
+  ci.addEventListener('change', () => { co.min = ci.value; if (co.value && co.value <= ci.value) co.value = ''; });
+})();
+
+document.getElementById('av-search-btn')?.addEventListener('click', async () => {
+  const ci = document.getElementById('av-check-in')?.value;
+  const co = document.getElementById('av-check-out')?.value;
+  if (!ci || !co) { showMsg('av-status', 'warning', t('msg-no-dates')); return; }
+  showMsg('av-status', 'loading', t('msg-loading'));
+  document.getElementById('av-rooms-container').innerHTML = '';
+  try {
+    const { ok, data } = await callFn('check_availability', { check_in: ci, check_out: co });
+    if (!ok) { showMsg('av-status', 'error', data.error || 'Error'); return; }
+    const rooms = data.available_rooms || [];
+    if (!rooms.length) { showMsg('av-status', 'warning', t('msg-no-avail-rooms')); return; }
+    showMsg('av-status', 'success', t('msg-found-rooms', rooms.length));
+    const container = document.getElementById('av-rooms-container');
+    const list = document.createElement('div'); list.className = 'room-list';
+    rooms.forEach(room => {
+      const row = document.createElement('div'); row.className = 'room-row';
+      row.innerHTML = `
+        <div class="room-info">
+          <h4>${room.room_type} &mdash; <span style="font-family:var(--sans);font-size:0.85rem">${room.room_id}</span></h4>
+          <div class="room-meta">${room.size_sqm} m² &ensp;&middot;&ensp; ${room.capacity} khách</div>
+        </div>
+        <div class="room-rate">${rateStr(room.rate_low, room.rate_high)}</div>`;
+      list.appendChild(row);
+    });
+    container.appendChild(list);
+  } catch (err) { showMsg('av-status', 'error', t('msg-connect-err', err.message)); }
+});
+
+// ── TAB 4: QUẢN TRỊ BẢNG GIÁ (CHÍNH XÁC THEO THẺ 3) ────────────
+async function loadRoomTypes() {
+  const sel = document.getElementById('rate-room-type');
+  if (!sel) return;
+  sel.innerHTML = `<option value="">${t('loading-types')}</option>`;
+  
+  let types = [];
+  try {
+    const rows = await restGet('room_types', '?select=room_type');
+    types = [...new Set((rows || []).map(r => r.room_type))].filter(Boolean).sort();
+  } catch (err) {
+    types = DEFAULT_ROOM_TYPES;
+  }
+
+  if (!types.length) types = DEFAULT_ROOM_TYPES;
+
+  sel.innerHTML = `<option value="">${t('select-type-opt')}</option>`;
+  types.forEach(rt => {
+    const opt = document.createElement('option');
+    opt.value = rt; opt.textContent = rt;
+    sel.appendChild(opt);
+  });
+}
+
+function resetRateCards() {
+  ['price-direct', 'price-ota1', 'price-ota2', 'price-gds'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+  const inp = document.getElementById('rate-base-input');
+  if (inp) inp.value = '';
+  currentBaseRate = null;
+}
+
+function updateChannelRateCards(baseRate) {
+  if (!baseRate || baseRate <= 0) return;
+  document.getElementById('price-direct').textContent = vndFmt(Math.round(baseRate * 0.95));
+  document.getElementById('price-ota1').textContent   = vndFmt(Math.round(baseRate * 1.05));
+  document.getElementById('price-ota2').textContent   = vndFmt(Math.round(baseRate * 1.05));
+  document.getElementById('price-gds').textContent    = vndFmt(baseRate);
+}
+
+async function loadCurrentRates(roomType) {
+  resetRateCards();
+  if (!roomType) return;
+
+  const inp = document.getElementById('rate-base-input');
+  if (inp) inp.placeholder = t('msg-loading');
+
+  const channelMap = {
+    direct: 'price-direct',
+    ota_1:  'price-ota1',
+    ota_2:  'price-ota2',
+    gds:    'price-gds'
+  };
+
+  try {
+    let baseRate = null;
+
+    // 1. Lấy base_rate từ bảng room_types (Thẻ 3)
+    try {
+      const rtRows = await restGet('room_types', `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=room_type,base_rate`);
+      if (rtRows && rtRows.length > 0 && Number(rtRows[0].base_rate) > 0) {
+        baseRate = Number(rtRows[0].base_rate);
+      }
+    } catch (e1) {}
+
+    // 2. Lấy giá kênh từ v_channel_rates
+    try {
+      const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
+      if (rows && rows.length > 0) {
+        rows.forEach(r => {
+          const code = String(r.channel_code || r.channel || '').toLowerCase().trim();
+          const elId = channelMap[code];
+          const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
+          if (elId && price > 0) {
+            const el = document.getElementById(elId);
+            if (el) el.textContent = vndFmt(price);
+          }
+          if (!baseRate && r.base_rate && Number(r.base_rate) > 0) {
+            baseRate = Number(r.base_rate);
+          }
+        });
+      }
+    } catch (e2) {}
+
+    // 3. Fallback an toàn tuyệt đối từ DEFAULT_ROOM_BASE_RATES
+    if (!baseRate) {
+      const normKey = roomType.toLowerCase().trim();
+      baseRate = (window.DEFAULT_ROOM_BASE_RATES && window.DEFAULT_ROOM_BASE_RATES[normKey]) || 4800000;
+    }
+
+    inp.value = baseRate;
+    currentBaseRate = Number(baseRate);
+    inp.placeholder = '4000000';
+    updateChannelRateCards(baseRate);
+
+  } catch (err) {
+    showMsg('rate-status', 'error', t('msg-connect-err', err.message));
+    if (inp) inp.placeholder = 'Lỗi kết nối';
+  }
+}
+
+document.getElementById('rate-room-type')?.addEventListener('change', async function() {
+  const rt = this.value;
+  currentRoomTypeRate = rt || null;
+  hideMsg('rate-status');
+  if (!rt) {
+    resetRateCards();
+    const container = document.getElementById('rate-history-container');
+    if (container) {
+      container.innerHTML = `<div class="no-results">${t('select-type-first')}</div>`;
+    }
+    return;
+  }
+  await Promise.all([loadCurrentRates(rt), loadRateHistory(rt)]);
+});
+
+// SỰ KIỆN LƯU THAY ĐỔI GIÁ: GỌI ĐÚNG EDGE FUNCTION THẺ 3 (changed_by: null)
+document.getElementById('update-rate-btn')?.addEventListener('click', async () => {
+  if (isUpdatingRate) return;
+
+  const roomType    = (document.getElementById('rate-room-type')?.value || '').trim();
+  const newBaseRate = Number(document.getElementById('rate-base-input')?.value);
+
+  if (!roomType) { 
+    showMsg('rate-status', 'warning', t('msg-no-type')); 
+    return; 
+  }
+  if (!newBaseRate || isNaN(newBaseRate) || newBaseRate <= 0) { 
+    showMsg('rate-status', 'warning', t('msg-no-rate')); 
+    return; 
+  }
+
+  // Chặn ghi log thừa nếu giá mới bằng giá hiện tại
+  if (currentBaseRate !== null && Number(newBaseRate) === Number(currentBaseRate)) {
+    showMsg('rate-status', 'warning', t('msg-same-rate'));
+    return;
+  }
+
+  isUpdatingRate = true;
+  setBusy('update-rate-btn', true);
+  showMsg('rate-status', 'loading', t('msg-updating-rate'));
+
+  try {
+    // Edge Function Thẻ 3 nhận: room_type, new_base_rate, changed_by (null)
+    const { ok, data } = await callFn('update_base_rate', {
+      room_type:     roomType,
+      new_base_rate: newBaseRate,
+      changed_by:    null
+    });
+
+    if (!ok) {
+      showMsg('rate-status', 'error', data?.error || t('msg-rate-error'));
+      isUpdatingRate = false;
+      setBusy('update-rate-btn', false);
+      return;
+    }
+
+    // Cập nhật giá thành công
+    showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
+    currentBaseRate = Number(newBaseRate);
+
+    // Cập nhật 4 card bằng calculated_rates do Edge Function trả về
+    if (data?.calculated_rates && Array.isArray(data.calculated_rates)) {
+      const channelMap = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
+      data.calculated_rates.forEach(cr => {
+        const code = String(cr.channel_code || cr.channel || '').toLowerCase().trim();
+        const elId = channelMap[code];
+        if (elId && cr.channel_rate) {
+          const el = document.getElementById(elId);
+          if (el) el.textContent = vndFmt(cr.channel_rate);
+        }
+      });
+    } else {
+      updateChannelRateCards(newBaseRate);
+    }
+
+    // Tải lại lịch sử và view
+    await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
+
+  } catch (err) {
+    showMsg('rate-status', 'error', t('msg-connect-err', err.message));
+  } finally {
+    isUpdatingRate = false;
+    setBusy('update-rate-btn', false);
+  }
+});
+
+async function loadRateHistory(roomType) {
+  const container = document.getElementById('rate-history-container');
+  if (!container) return;
+  container.innerHTML = `<div class="no-results">${t('msg-loading')}</div>`;
+  try {
+    const rows = await restGet('rate_history',
+      `?room_type=eq.${encodeURIComponent(roomType)}&order=changed_at.desc&limit=20`);
+    if (!rows?.length) {
+      container.innerHTML = `<div class="no-results">${t('no-history')}</div>`;
+      return;
+    }
+    const wrap = document.createElement('div'); wrap.className = 'bookings-table-wrap';
+    wrap.innerHTML = `
+      <table class="bookings-table">
+        <thead><tr>
+          <th>${t('table-th-hist-room')}</th>
+          <th>${t('table-th-hist-old')}</th>
+          <th>${t('table-th-hist-new')}</th>
+          <th>${t('table-th-hist-by')}</th>
+          <th>${t('table-th-hist-time')}</th>
+        </tr></thead>
+        <tbody id="history-tbody"></tbody>
+      </table>`;
+    container.innerHTML = ''; container.appendChild(wrap);
+    const tbody = document.getElementById('history-tbody');
+    rows.forEach(r => {
+      const d = r.changed_at ? new Date(r.changed_at).toLocaleString(currentLang === 'en' ? 'en-US' : 'vi-VN') : '—';
+      
+      let displayChangedBy = 'Revenue Manager';
+      if (r.changed_by && String(r.changed_by).length > 8) {
+        displayChangedBy = 'Revenue Manager';
+      }
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.room_type}</td>
+        <td style="color:var(--muted)">${r.old_base_rate ? vndFmt(r.old_base_rate) : '—'}</td>
+        <td style="color:var(--forest);font-weight:500">${r.new_base_rate ? vndFmt(r.new_base_rate) : '—'}</td>
+        <td style="font-size:0.77rem;color:var(--muted)">${displayChangedBy}</td>
+        <td style="font-size:0.77rem;color:var(--muted)">${d}</td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="no-results">${t('no-history')}</div>`;
+  }
+}
+
+document.getElementById('refresh-history-btn')?.addEventListener('click', () => {
+  if (currentRoomTypeRate) loadRateHistory(currentRoomTypeRate);
+});
+
+// ── KHỞI CHẠY TỰ ĐỘNG KHI TẢI XONG TRANG ───────────────────────
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initPin();
+    initLang();
+    initTabs();
+  });
+} else {
+  initPin();
+  initLang();
+  initTabs();
+}
