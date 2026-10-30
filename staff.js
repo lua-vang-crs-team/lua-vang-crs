@@ -9,7 +9,11 @@ window.DEFAULT_ROOM_BASE_RATES = {
   "junior suite lagoon":         7500000,
   "lantern pool villa":          11500000,
   "two-bedroom beachfront villa": 14500000,
-  "presidential silk villa":     28000000
+  "presidential silk villa":     28000000,
+  // Alias dự phòng nếu DB chưa kịp cập nhật tên
+  "deluxe garden view":          4800000,
+  "suite lagoon view":           7500000,
+  "oceanfront villa":           14500000
 };
 
 const DEFAULT_ROOM_TYPES = [
@@ -67,7 +71,7 @@ const I18N = {
     'avail-tag':         'Tra cứu nhanh',
     'avail-h2':          'Kiểm tra tình trạng phòng theo giai đoạn',
     'btn-search':        'Kiểm tra',
-    'rate-tag':          'Quản trị giá bán & Kênh phân phối',
+    'rate-tag':          'Quản trị giá bán &amp; Kênh phân phối',
     'rate-h2':           'Cập nhật giá bán cơ bản (Base Rate)',
     'label-room-type':   'Hạng phòng áp dụng',
     'label-base-rate':   'Giá cơ bản / đêm (VNĐ)',
@@ -120,7 +124,7 @@ const I18N = {
     'msg-conflict':      'Phòng đã có khách đặt trùng ngày (Xung đột trạng thái).',
     'no-history':        'Chưa có lịch sử thay đổi biểu giá cho hạng phòng này.',
     'loading-types':     'Đang tải danh mục phòng…',
-    'select-type-first': 'Vui lòng chọn hạng phòng để xem bảng giá và lịch sử…',
+    'select-type-first': 'Chọn hạng phòng để xem bảng giá và lịch sử điều chỉnh.',
     'select-type-opt':   'Chọn hạng phòng…',
     'msg-rate-error':    'Không thể cập nhật biểu giá. Vui lòng kiểm tra lại cấu hình.',
     'msg-found-rooms':   (n) => `Tìm thấy <strong>${n}</strong> phòng sẵn sàng phục vụ.`,
@@ -167,7 +171,7 @@ const I18N = {
     'avail-tag':         'Quick Search',
     'avail-h2':          'Room Availability Status',
     'btn-search':        'Check',
-    'rate-tag':          'Revenue & Channel Management',
+    'rate-tag':          'Revenue &amp; Channel Management',
     'rate-h2':           'Update Room Base Rates',
     'label-room-type':   'Room Category',
     'label-base-rate':   'Base Rate / Night (VND)',
@@ -363,7 +367,7 @@ function initLang() {
   applyLanguage(saved);
 }
 
-// ── PIN AUTHENTICATION (XỬ LÝ CHUẨN HÓA MÃ PIN CHỐNG GÕ SAI) ───
+// ── PIN AUTHENTICATION ─────────────────────────────────────────
 window.unlockStaffPortal = function() {
   const overlay = document.getElementById('pin-overlay');
   if (overlay) {
@@ -387,8 +391,6 @@ window.handleStaffLogin = function(e) {
 
   const input = document.getElementById('pin-input');
   const card  = document.getElementById('pin-card');
-  
-  // Chuẩn hóa: lọc sạch toàn bộ khoảng trắng và ký tự không phải số
   const rawValue = input ? input.value : '';
   const entered = String(rawValue).replace(/\D/g, '').trim();
 
@@ -746,7 +748,7 @@ async function loadRoomTypes() {
   
   let types = [];
   try {
-    const rows = await restGet('room_types', '?select=room_type');
+    const rows = await restGet('room', '?select=room_type&order=room_type');
     types = [...new Set((rows || []).map(r => r.room_type))].filter(Boolean).sort();
   } catch (err) {
     types = DEFAULT_ROOM_TYPES;
@@ -757,7 +759,8 @@ async function loadRoomTypes() {
   sel.innerHTML = `<option value="">${t('select-type-opt')}</option>`;
   types.forEach(rt => {
     const opt = document.createElement('option');
-    opt.value = rt; opt.textContent = rt;
+    opt.value = rt;
+    opt.textContent = rt;
     sel.appendChild(opt);
   });
 }
@@ -787,54 +790,86 @@ async function loadCurrentRates(roomType) {
   const inp = document.getElementById('rate-base-input');
   if (inp) inp.placeholder = t('msg-loading');
 
-  const channelMap = {
-    direct: 'price-direct',
-    ota_1:  'price-ota1',
-    ota_2:  'price-ota2',
-    gds:    'price-gds'
-  };
-
   try {
     let baseRate = null;
 
+    // 1. Thử rate_history — lấy lần cập nhật gần nhất
     try {
-      const rtRows = await restGet('room_types', `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=room_type,base_rate`);
-      if (rtRows && rtRows.length > 0 && Number(rtRows[0].base_rate) > 0) {
-        baseRate = Number(rtRows[0].base_rate);
+      const histRows = await restGet(
+        'rate_history',
+        `?room_type=eq.${encodeURIComponent(roomType.trim())}&order=changed_at.desc&limit=1`
+      );
+      if (histRows && histRows.length > 0) {
+        const latest = Number(histRows[0].new_base_rate);
+        if (latest > 0) baseRate = latest;
       }
-    } catch (e1) {}
+    } catch (_e1) {}
 
-    try {
-      const rows = await restGet('v_channel_rates', `?room_type=eq.${encodeURIComponent(roomType.trim())}`);
-      if (rows && rows.length > 0) {
-        rows.forEach(r => {
-          const code = String(r.channel_code || r.channel || '').toLowerCase().trim();
-          const elId = channelMap[code];
-          const price = Number(r.channel_rate ?? r.computed_rate ?? r.rate ?? 0);
-          if (elId && price > 0) {
-            const el = document.getElementById(elId);
-            if (el) el.textContent = vndFmt(price);
-          }
-          if (!baseRate && r.base_rate && Number(r.base_rate) > 0) {
-            baseRate = Number(r.base_rate);
-          }
-        });
-      }
-    } catch (e2) {}
-
+    // 2. Thử view v_channel_rates
     if (!baseRate) {
+      try {
+        const vRows = await restGet(
+          'v_channel_rates',
+          `?room_type=eq.${encodeURIComponent(roomType.trim())}&limit=1`
+        );
+        if (vRows && vRows.length > 0 && Number(vRows[0].base_rate) > 0) {
+          baseRate = Number(vRows[0].base_rate);
+        }
+      } catch (_eView) {}
+    }
+
+    // 3. Thử bảng room — rate_low
+    if (!baseRate) {
+      try {
+        const roomRows = await restGet(
+          'room',
+          `?room_type=eq.${encodeURIComponent(roomType.trim())}&select=rate_low,rate_high&limit=1`
+        );
+        if (roomRows && roomRows.length > 0) {
+          const low  = Number(roomRows[0].rate_low  || 0);
+          const high = Number(roomRows[0].rate_high || 0);
+          if (low > 0)       baseRate = low;
+          else if (high > 0) baseRate = high;
+        }
+      } catch (_e2) {}
+    }
+
+    // 4. Fallback mặc định theo tên phòng
+    if (!baseRate || baseRate <= 0) {
       const normKey = roomType.toLowerCase().trim();
       baseRate = (window.DEFAULT_ROOM_BASE_RATES && window.DEFAULT_ROOM_BASE_RATES[normKey]) || 4800000;
     }
 
-    inp.value = baseRate;
+    if (inp) {
+      inp.value = baseRate;
+      inp.placeholder = '4000000';
+    }
     currentBaseRate = Number(baseRate);
-    inp.placeholder = '4000000';
     updateChannelRateCards(baseRate);
-
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
     if (inp) inp.placeholder = 'Lỗi kết nối';
+  }
+}
+
+async function pushRateToOTAs(roomType, newBaseRate) {
+  const payload = {
+    room_type:     roomType,
+    new_base_rate: newBaseRate,
+    channel_rates: {
+      direct: Math.round(newBaseRate * 0.95),
+      ota_1:  Math.round(newBaseRate * 1.05),
+      ota_2:  Math.round(newBaseRate * 1.05),
+      gds:    newBaseRate,
+    },
+  };
+
+  const candidates = ['push_rate_update', 'notify_rate_change', 'push_availability_update'];
+  for (const fn of candidates) {
+    try {
+      const { ok } = await callFn(fn, payload);
+      if (ok) return;
+    } catch {}
   }
 }
 
@@ -859,15 +894,14 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
   const roomType    = (document.getElementById('rate-room-type')?.value || '').trim();
   const newBaseRate = Number(document.getElementById('rate-base-input')?.value);
 
-  if (!roomType) { 
-    showMsg('rate-status', 'warning', t('msg-no-type')); 
-    return; 
+  if (!roomType) {
+    showMsg('rate-status', 'warning', t('msg-no-type'));
+    return;
   }
-  if (!newBaseRate || isNaN(newBaseRate) || newBaseRate <= 0) { 
-    showMsg('rate-status', 'warning', t('msg-no-rate')); 
-    return; 
+  if (!newBaseRate || isNaN(newBaseRate) || newBaseRate < 100000) {
+    showMsg('rate-status', 'warning', t('msg-no-rate'));
+    return;
   }
-
   if (currentBaseRate !== null && Number(newBaseRate) === Number(currentBaseRate)) {
     showMsg('rate-status', 'warning', t('msg-same-rate'));
     return;
@@ -881,35 +915,41 @@ document.getElementById('update-rate-btn')?.addEventListener('click', async () =
     const { ok, data } = await callFn('update_base_rate', {
       room_type:     roomType,
       new_base_rate: newBaseRate,
-      changed_by:    null
+      changed_by:    null,
     });
 
     if (!ok) {
       showMsg('rate-status', 'error', data?.error || t('msg-rate-error'));
-      isUpdatingRate = false;
-      setBusy('update-rate-btn', false);
       return;
     }
 
     showMsg('rate-status', 'success', t('msg-rate-success', roomType, newBaseRate));
     currentBaseRate = Number(newBaseRate);
 
-    if (data?.calculated_rates && Array.isArray(data.calculated_rates)) {
-      const channelMap = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
+    const CHANNEL_MAP = { direct: 'price-direct', ota_1: 'price-ota1', ota_2: 'price-ota2', gds: 'price-gds' };
+    let cardUpdatedFromAPI = false;
+
+    if (data?.calculated_rates && Array.isArray(data.calculated_rates) && data.calculated_rates.length > 0) {
       data.calculated_rates.forEach(cr => {
-        const code = String(cr.channel_code || cr.channel || '').toLowerCase().trim();
-        const elId = channelMap[code];
-        if (elId && cr.channel_rate) {
+        const code  = String(cr.channel_code || cr.channel || '').toLowerCase().trim();
+        const elId  = CHANNEL_MAP[code];
+        const price = Number(cr.channel_rate ?? cr.computed_rate ?? cr.rate ?? 0);
+        if (elId && price > 0) {
           const el = document.getElementById(elId);
-          if (el) el.textContent = vndFmt(cr.channel_rate);
+          if (el) { el.textContent = vndFmt(price); cardUpdatedFromAPI = true; }
         }
       });
-    } else {
+    }
+
+    if (!cardUpdatedFromAPI) {
       updateChannelRateCards(newBaseRate);
     }
 
-    await Promise.all([loadCurrentRates(roomType), loadRateHistory(roomType)]);
+    const rateInp = document.getElementById('rate-base-input');
+    if (rateInp) rateInp.value = newBaseRate;
 
+    pushRateToOTAs(roomType, newBaseRate);
+    await loadRateHistory(roomType);
   } catch (err) {
     showMsg('rate-status', 'error', t('msg-connect-err', err.message));
   } finally {
@@ -944,13 +984,10 @@ async function loadRateHistory(roomType) {
     container.innerHTML = ''; container.appendChild(wrap);
     const tbody = document.getElementById('history-tbody');
     rows.forEach(r => {
-      const d = r.changed_at ? new Date(r.changed_at).toLocaleString(currentLang === 'en' ? 'en-US' : 'vi-VN') : '—';
-      
-      let displayChangedBy = 'Revenue Manager';
-      if (r.changed_by && String(r.changed_by).length > 8) {
-        displayChangedBy = 'Revenue Manager';
-      }
-
+      const d = r.changed_at
+        ? new Date(r.changed_at).toLocaleString(currentLang === 'en' ? 'en-US' : 'vi-VN')
+        : '—';
+      const displayChangedBy = 'Revenue Manager';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${r.room_type}</td>
